@@ -77,6 +77,7 @@ ignore = [
     #     "D407",    # Missing dashed underline after section
     #     "ERA001",  # Commented out code
     "FIX002", # Fixme comment
+    "T201",
     #     "S311",    # suspicious-non-cryptographic-random-usage
     #     "EM101",   # raw-string-in-exception
     #     "TRY003",  # Avoid specifying long messages outside the exception class

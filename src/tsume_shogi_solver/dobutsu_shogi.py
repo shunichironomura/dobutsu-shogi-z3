@@ -1,7 +1,7 @@
 """Dōbutsu Shōgi (Animal Chess) - Complete Z3 Model."""
 
 from enum import Enum
-from typing import TYPE_CHECKING, NewType
+from typing import TYPE_CHECKING, Literal, NewType, TypedDict
 
 from z3 import Abs, And, Bool, BoolRef, If, Implies, Int, Not, Or, Solver, is_true, sat
 
@@ -43,6 +43,44 @@ class Player(Enum):
 
     SENTE = PlayerId(0)  # First player (starts at bottom)
     GOTE = PlayerId(1)  # Second player (starts at top)
+
+
+"""
+                move_data: MoveData = {
+                    "move_number": t + 1,
+                    "player": "Sente" if t % 2 == 0 else "Gote",
+                    "piece_id": model[move["piece_id"]].as_long(),
+                    "is_drop": is_true(model[move["is_drop"]]),
+                    "from_": (model[move["from_row"]].as_long(), model[move["from_col"]].as_long()),
+                    "to": (model[move["to_row"]].as_long(), model[move["to_col"]].as_long()),
+                    "captures": model[move["captures"]].as_long(),
+                }
+"""
+
+
+class Move(TypedDict):
+    """Representation of a move in Dōbutsu Shōgi."""
+
+    piece_id: ArithRef  # Piece being moved (0-7)
+    from_row: ArithRef  # Starting row (0 for drop)
+    from_col: ArithRef  # Starting column (0 for drop)
+    to_row: ArithRef  # Target row (1-4)
+    to_col: ArithRef  # Target column (1-3)
+    is_drop: BoolRef  # True if this is a drop move
+    captures: ArithRef  # -1 if no capture, else piece id being captured
+
+
+class MoveData(TypedDict):
+    """Data structure for a move in Dōbutsu Shōgi."""
+
+    move_number: MoveIndex  # Move number (1-indexed)
+    player: Literal["Sente", "Gote"]  # "Sente" or "Gote"
+    piece_id: PieceId  # Piece ID (0-7)
+    is_drop: bool  # True if this is a drop move
+    from_: tuple[int, int]  # (row, col) of the piece before the move
+    to: tuple[int, int]  # (row, col) of the piece after the move
+    captures: int  # -1 if no capture, else piece id being captured
+    piece_type: Literal["Lion", "Giraffe", "Elephant", "Chick", "Hen"]
 
 
 class DobutsuShogiZ3:
@@ -123,7 +161,7 @@ class DobutsuShogiZ3:
                 self.solver.add(self.piece_in_hand_of[t][p] <= 1)
 
         # Move representation
-        self.moves = []
+        self.moves: list[Move] = []
         for _t in range(self.max_moves):
             t = MoveIndex(_t)
             self.moves.append(
@@ -299,7 +337,7 @@ class DobutsuShogiZ3:
             # Apply move effects
             self._apply_move_effects(t)
 
-    def _valid_move_pattern(self, t: MoveIndex, move: dict, piece_id: PieceId) -> BoolRef:
+    def _valid_move_pattern(self, t: MoveIndex, move: Move, piece_id: PieceId) -> BoolRef:
         """Check if move follows piece movement rules.
 
         Args:
@@ -512,7 +550,7 @@ class DobutsuShogiZ3:
 
         return Or(victory_conditions)
 
-    def solve_mate_in_n(self, n: MoveIndex, winning_player: Player = Player.SENTE) -> list[dict] | None:
+    def solve_mate_in_n(self, n: MoveIndex, winning_player: Player = Player.SENTE) -> list[MoveData] | None:
         """Try to find a mate in exactly n moves for the specified player.
 
         Args:
@@ -556,30 +594,36 @@ class DobutsuShogiZ3:
             print(f"\nBoard state after move {n}:")
             self.print_board_state(model, n)
 
-            moves = []
+            moves: list[MoveData] = []
 
             for _t in range(n):
                 t = MoveIndex(_t)
                 move = self.moves[t]
-                move_data = {
-                    "move_number": t + 1,
+
+                piece_id = PieceId(model[move["piece_id"]].as_long())
+                piece_type_val: int = model[self.piece_type[piece_id]].as_long()
+                piece_types: list[Literal["Lion", "Giraffe", "Elephant", "Chick", "Hen"]] = [
+                    "Lion",
+                    "Giraffe",
+                    "Elephant",
+                    "Chick",
+                    "Hen",
+                ]
+
+                move_data: MoveData = {
+                    "move_number": MoveIndex(t + 1),
                     "player": "Sente" if t % 2 == 0 else "Gote",
-                    "piece_id": model[move["piece_id"]].as_long(),
+                    "piece_id": piece_id,
                     "is_drop": is_true(model[move["is_drop"]]),
-                    "from": (model[move["from_row"]].as_long(), model[move["from_col"]].as_long()),
+                    "from_": (model[move["from_row"]].as_long(), model[move["from_col"]].as_long()),
                     "to": (model[move["to_row"]].as_long(), model[move["to_col"]].as_long()),
                     "captures": model[move["captures"]].as_long(),
+                    "piece_type": piece_types[piece_type_val],
                 }
 
-                # Get piece info
-                pid = move_data["piece_id"]
-                piece_type_val = model[self.piece_type[pid]].as_long()
-                piece_types = ["Lion", "Giraffe", "Elephant", "Chick", "Hen"]
-                move_data["piece_type"] = piece_types[piece_type_val]
-
                 # Debug: Print piece owner
-                owner = model[self.piece_owner[pid]].as_long()
-                print(f"\nDebug Move {t + 1}: Piece {pid} (type={piece_type_val}, owner={owner})")
+                owner = model[self.piece_owner[piece_id]].as_long()
+                print(f"\nDebug Move {t + 1}: Piece {piece_id} (type={piece_type_val}, owner={owner})")
                 print(f"  From: ({model[move['from_row']].as_long()}, {model[move['from_col']].as_long()})")
                 print(f"  To: ({model[move['to_row']].as_long()}, {model[move['to_col']].as_long()})")
                 if move_data["captures"] >= 0:
@@ -604,7 +648,7 @@ class DobutsuShogiZ3:
         return None
 
     def _victory_condition_for_player(self, t: MoveIndex, winning_player: PlayerId) -> BoolRef:
-        """Check if the specified player has won at time t"""
+        """Check if the specified player has won at time t."""
         victory_conditions = []
 
         for _p in range(self.NUM_PIECES):
@@ -689,7 +733,7 @@ class DobutsuShogiZ3:
 
 # Example usage
 def example_mate_problem() -> None:
-    """Set up and solve a simple mate problem"""
+    """Set up and solve a simple mate problem."""
     print("=== Dōbutsu Shōgi Mate Solver ===")
     print("Initial position: Standard starting position")
 
@@ -724,7 +768,8 @@ def example_mate_problem() -> None:
 
     # Try to find mate for SENTE (first player)
     print("Looking for mates where SENTE wins...")
-    for n in [1, 3, 5, 7]:
+    for _n in [1, 3, 5, 7]:
+        n = MoveIndex(_n)
         print(f"\nSearching for SENTE mate in {n} moves...")
         solution = solver.solve_mate_in_n(n, Player.SENTE)
 
@@ -747,7 +792,7 @@ def example_mate_problem() -> None:
 
 
 def test_custom_position() -> None:
-    """Test with a custom position where mate exists"""
+    """Test with a custom position where mate exists."""
     print("\n\n=== Custom Position Test ===")
     print("Setting up a position where SENTE can mate in 1...")
 
@@ -757,39 +802,4 @@ def test_custom_position() -> None:
 
 
 if __name__ == "__main__":
-    try:
-        example_mate_problem()
-        # test_custom_position()
-    except Exception as e:
-        print(f"Error: {e}")
-        import traceback
-
-        traceback.print_exc()
-
-
-def test_simple_position() -> None:
-    """Test with a simple mate-in-1 position"""
-    print("\n=== Testing Simple Mate-in-1 Position ===")
-
-    # Create a custom position where mate in 1 is possible
-    # This would require modifying the initial position setup
-    # For now, we'll just run with standard position
-
-    solver = DobutsuShogiZ3(max_moves=3)
-
-    # You could modify the _add_initial_position method to set up
-    # specific positions for testing
-
-    print("To test specific positions, modify the _add_initial_position method")
-    print("to set up the desired board state.")
-
-
-if __name__ == "__main__":
-    try:
-        example_mate_problem()
-        # test_simple_position()
-    except Exception as e:
-        print(f"Error: {e}")
-        import traceback
-
-        traceback.print_exc()
+    example_mate_problem()
