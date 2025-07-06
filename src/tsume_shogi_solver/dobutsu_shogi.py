@@ -19,29 +19,29 @@ from .types import (
 )
 
 __all__ = [
-    # Core types
-    "Player",
-    "PieceType",
-    "PieceState",
-    "PieceId",
-    "Position",
-    "DEFAULT_INITIAL_SETUP",
     # Problem types
     "CheckmateProblem",
-    "ReachabilityProblem",
-    "TsumeProblem",
-    # Solution types
     "CheckmateSolution",
-    "ReachabilitySolution",
-    "TsumeSolution",
-    # Solvers
     "CheckmateSolver",
+    # Core types
+    "DEFAULT_INITIAL_SETUP",
+    "PieceId",
+    "PieceState",
+    "PieceType",
+    "Player",
+    "Position",
+    # Reachability
+    "ReachabilityProblem",
+    "ReachabilitySolution",
     "ReachabilitySolver",
+    # Tsume
+    "TsumeProblem",
+    "TsumeSolution",
     "TsumeSolver",
     # Convenience functions
+    "can_reach",
     "find_checkmate",
     "find_shortest_mate",
-    "can_reach",
     "find_shortest_path",
 ]
 
@@ -83,7 +83,8 @@ def can_reach(
             break
 
     if player is None:
-        raise ValueError(f"Piece {piece_id} not found in initial state")
+        msg = f"Piece {piece_id} not found in initial state"
+        raise ValueError(msg)
 
     problem = ReachabilityProblem(initial_state, piece_id, target, player, max_moves)
     solver = ReachabilitySolver()
@@ -105,22 +106,9 @@ def find_shortest_path(
             break
 
     if player is None:
-        raise ValueError(f"Piece {piece_id} not found in initial state")
+        msg = f"Piece {piece_id} not found in initial state"
+        raise ValueError(msg)
 
     problem = ReachabilityProblem(initial_state, piece_id, target, player, max_moves)
     solver = ReachabilitySolver()
     return solver.find_shortest_path(problem)
-
-
-# Backward compatibility - preserve some of the original interface
-class DobutsuShogiZ3:
-    """Backward compatibility wrapper for the original interface."""
-
-    def __init__(self, max_moves: int = 20, initial_setup: list[PieceState] | None = None):
-        self.max_moves = max_moves
-        self.initial_setup = initial_setup or DEFAULT_INITIAL_SETUP.copy()
-
-    def solve_mate_in_n(self, n: int, winning_player: Player = Player.SENTE) -> list | None:
-        """Backward compatibility method."""
-        solution = find_checkmate(self.initial_setup, winning_player, n)
-        return solution.moves if solution else None

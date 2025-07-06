@@ -1,26 +1,25 @@
-"""DMbutsu ShMgi (Animal Chess) solver using Z3 SMT solver."""
+"""Dōbutsu Shōgi (Animal Chess) solver using Z3 SMT solver."""
 
 from .dobutsu_shogi import *
 
 __all__ = [
-    "Player",
-    "PieceType",
-    "PieceState", 
-    "PieceId",
-    "Position",
     "DEFAULT_INITIAL_SETUP",
     "CheckmateProblem",
-    "ReachabilityProblem",
-    "TsumeProblem",
     "CheckmateSolution",
-    "ReachabilitySolution",
-    "TsumeSolution",
     "CheckmateSolver",
+    "PieceId",
+    "PieceState",
+    "PieceType",
+    "Player",
+    "Position",
+    "ReachabilityProblem",
+    "ReachabilitySolution",
     "ReachabilitySolver",
+    "TsumeProblem",
+    "TsumeSolution",
     "TsumeSolver",
+    "can_reach",
     "find_checkmate",
     "find_shortest_mate",
-    "can_reach",
     "find_shortest_path",
-    "DobutsuShogiZ3",  # Backward compatibility
 ]

@@ -44,7 +44,7 @@ class GameState:
 
     @classmethod
     def create(cls, max_moves: int) -> GameState:
-        """Factory method to create and initialize all Z3 variables."""
+        """Create and initialize all Z3 variables."""
         return cls(max_moves=max_moves)
 
     def _create_variables(self) -> None:
