@@ -1,6 +1,6 @@
 """Examples demonstrating the new modular Dōbutsu Shōgi solver."""
 
-from tsume_shogi_solver import (
+from dobutsu_shogi_z3 import (
     DEFAULT_INITIAL_SETUP,
     CheckmateProblem,
     CheckmateSolver,
@@ -17,7 +17,7 @@ from tsume_shogi_solver import (
     find_shortest_mate,
     find_shortest_path,
 )
-from tsume_shogi_solver.core import ColIndex, RowIndex
+from dobutsu_shogi_z3.core import ColIndex, RowIndex
 
 
 def example_checkmate_solving() -> None:

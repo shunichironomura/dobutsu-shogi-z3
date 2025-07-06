@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from z3 import Not, sat
 
-from tsume_shogi_solver.core import Player, TimeIndex
-from tsume_shogi_solver.problems import CheckmateProblem, CheckmateSolution
-from tsume_shogi_solver.z3_constraints import GameRules
+from dobutsu_shogi_z3.core import Player, TimeIndex
+from dobutsu_shogi_z3.problems import CheckmateProblem, CheckmateSolution
+from dobutsu_shogi_z3.z3_constraints import GameRules
 
 from .base import BaseSolver
 

@@ -28,7 +28,7 @@ This document outlines the comprehensive refactoring plan for the Dōbutsu Shōg
 ### Module Structure
 
 ```
-src/tsume_shogi_solver/
+src/dobutsu_shogi_z3/
 ├── types.py          # Core algebraic types and protocols
 ├── game_state.py     # Z3 variable management
 ├── game_rules.py     # Constraint generation logic
@@ -107,10 +107,10 @@ Lightweight container for Z3 variables:
 class GameState:
     """Pure Z3 variable container for game state."""
     max_moves: int
-    
+
     # Static piece properties
     piece_type: dict[PieceId, ArithRef]
-    
+
     # Dynamic state variables
     piece_owner: dict[tuple[TimeIndex, PieceId], ArithRef]
     piece_row: dict[tuple[TimeIndex, PieceId], ArithRef]
@@ -118,10 +118,10 @@ class GameState:
     piece_captured: dict[tuple[TimeIndex, PieceId], BoolRef]
     piece_promoted: dict[tuple[TimeIndex, PieceId], BoolRef]
     piece_in_hand_of: dict[tuple[TimeIndex, PieceId], ArithRef]
-    
+
     # Move variables
     moves: dict[TimeIndex, MoveVariables]
-    
+
     @classmethod
     def create(cls, max_moves: int) -> 'GameState':
         """Factory method to create and initialize all Z3 variables."""
@@ -135,7 +135,7 @@ Functional constraint generation:
 ```python
 class GameRules:
     """Static methods for generating game constraints."""
-    
+
     @staticmethod
     def basic_constraints(state: GameState) -> list[BoolRef]:
         """Generate basic game invariants."""
@@ -151,7 +151,7 @@ class GameRules:
                 promotion_constraint(state, t, p),
             ]
         ]
-    
+
     @staticmethod
     def movement_constraints(state: GameState) -> list[BoolRef]:
         """Generate movement rules for each piece type."""
@@ -159,7 +159,7 @@ class GameRules:
             movement_constraint(state, t, move)
             for t, move in state.moves.items()
         ]
-    
+
     @staticmethod
     def victory_conditions(state: GameState, t: TimeIndex, player: Player) -> BoolRef:
         """Check victory conditions at time t."""
@@ -180,35 +180,35 @@ class Solver(Protocol):
 
 class CheckmateSolver:
     """Finds forced checkmate sequences."""
-    
+
     def solve(self, problem: CheckmateProblem) -> CheckmateSolution | None:
         state = GameState.create(problem.max_moves)
         solver = Solver()
-        
+
         # Add initial position
         solver.add(initial_position_constraints(state, problem.initial_state))
-        
+
         # Add game rules
         solver.add(GameRules.basic_constraints(state))
         solver.add(GameRules.movement_constraints(state))
-        
+
         # Add checkmate constraints
         solver.add(checkmate_constraints(state, problem))
-        
+
         if solver.check() == sat:
             return extract_checkmate_solution(solver.model(), state, problem)
         return None
 
 class ReachabilitySolver:
     """Proves piece can reach target position."""
-    
+
     def solve(self, problem: ReachabilityProblem) -> ReachabilitySolution | None:
         # Similar structure with reachability-specific constraints
         pass
 
 class TsumeSolver:
     """General constraint-based problem solver."""
-    
+
     def solve(self, problem: TsumeProblem) -> TsumeSolution | None:
         # Flexible constraint solving
         pass
@@ -223,14 +223,14 @@ Functional helpers to reduce code duplication:
 def for_all_pieces(constraint_fn: Callable) -> Callable:
     """Apply constraint to all pieces."""
     return lambda state, t: And([
-        constraint_fn(state, t, p) 
+        constraint_fn(state, t, p)
         for p in range(N_PIECES)
     ])
 
 def for_all_times(constraint_fn: Callable) -> Callable:
     """Apply constraint to all time steps."""
     return lambda state: And([
-        constraint_fn(state, t) 
+        constraint_fn(state, t)
         for t in range(state.max_moves)
     ])
 
@@ -264,14 +264,14 @@ from .types import CheckmateProblem, ReachabilityProblem, TsumeProblem
 __all__ = [
     # Solvers
     'CheckmateSolver',
-    'ReachabilitySolver', 
+    'ReachabilitySolver',
     'TsumeSolver',
-    
+
     # Problem types
     'CheckmateProblem',
     'ReachabilityProblem',
     'TsumeProblem',
-    
+
     # Core types
     'Player',
     'PieceType',
@@ -298,28 +298,33 @@ def can_reach(initial_state: list[PieceState], piece_id: PieceId, target: Positi
 ## Implementation Strategy
 
 ### Phase 1: Core Types and GameState (2 hours)
+
 - [ ] Create `types.py` with all algebraic types
 - [ ] Implement `GameState` class with Z3 variable creation
 - [ ] Add type aliases and NewType definitions
 
 ### Phase 2: Game Rules Extraction (2 hours)
+
 - [ ] Create `game_rules.py` with static constraint methods
 - [ ] Implement constraint combinators
 - [ ] Convert existing constraints to functional style
 
 ### Phase 3: Solver Implementation (3 hours)
+
 - [ ] Create solver protocol in `base.py`
 - [ ] Implement `CheckmateSolver`
 - [ ] Implement `ReachabilitySolver`
 - [ ] Implement `TsumeSolver`
 
 ### Phase 4: Integration and Testing (2 hours)
+
 - [ ] Create public API in `dobutsu_shogi.py`
 - [ ] Migrate existing tests
 - [ ] Add new tests for each solver type
 - [ ] Write usage examples
 
 ### Phase 5: Optimization (1 hour)
+
 - [ ] Profile and optimize constraint generation
 - [ ] Remove redundant code
 - [ ] Add caching where beneficial
@@ -327,18 +332,21 @@ def can_reach(initial_state: list[PieceState], piece_id: PieceId, target: Positi
 ## Expected Outcomes
 
 ### Code Metrics
+
 - **Line Count**: ~500 lines (40% reduction)
 - **Module Count**: 7 focused modules (vs 1 monolithic)
 - **Type Safety**: 100% type coverage
 - **Test Coverage**: >95%
 
 ### Functionality
+
 - ✅ Checkmate detection
 - ✅ Reachability analysis
 - ✅ Custom Tsume problems
 - ✅ Easy extension for new problem types
 
 ### Code Quality
+
 - **Separation of Concerns**: Clear module boundaries
 - **DRY Principle**: No repeated constraint logic
 - **Type Safety**: Compile-time error detection
@@ -347,8 +355,9 @@ def can_reach(initial_state: list[PieceState], piece_id: PieceId, target: Positi
 ## Usage Examples
 
 ### Example 1: Find Checkmate
+
 ```python
-from tsume_shogi_solver import CheckmateSolver, CheckmateProblem, Player, DEFAULT_INITIAL_SETUP
+from dobutsu_shogi_z3 import CheckmateSolver, CheckmateProblem, Player, DEFAULT_INITIAL_SETUP
 
 solver = CheckmateSolver()
 problem = CheckmateProblem(
@@ -365,8 +374,9 @@ if solution:
 ```
 
 ### Example 2: Prove Reachability
+
 ```python
-from tsume_shogi_solver import ReachabilitySolver, ReachabilityProblem
+from dobutsu_shogi_z3 import ReachabilitySolver, ReachabilityProblem
 
 solver = ReachabilitySolver()
 problem = ReachabilityProblem(
@@ -383,8 +393,9 @@ if solution:
 ```
 
 ### Example 3: Custom Tsume Problem
+
 ```python
-from tsume_shogi_solver import TsumeSolver, TsumeProblem, Constraint
+from dobutsu_shogi_z3 import TsumeSolver, TsumeProblem, Constraint
 
 # Define custom constraints
 constraints = [

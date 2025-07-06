@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from z3 import And, Or, sat
 
-from tsume_shogi_solver.core import TimeIndex
-from tsume_shogi_solver.problems import ReachabilityProblem, ReachabilitySolution
+from dobutsu_shogi_z3.core import TimeIndex
+from dobutsu_shogi_z3.problems import ReachabilityProblem, ReachabilitySolution
 
 from .base import BaseSolver
 

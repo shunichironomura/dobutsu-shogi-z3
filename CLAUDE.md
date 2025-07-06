@@ -12,7 +12,7 @@ Read the [Dōbutsu Shōgi rules](dobutsu-shogi-rules.md) for detailed game mecha
 
 ## Key Components
 
-- **`src/tsume_shogi_solver/dobutsu_shogi.py`**: Main solver implementation using Z3 SMT solver
+- **`src/dobutsu_shogi_z3/dobutsu_shogi.py`**: Main solver implementation using Z3 SMT solver
   - `DobutsuShogiZ3` class: Complete Z3 model for the game
   - `PieceType` enum: Defines piece types (Lion, Giraffe, Elephant, Chick, Hen)
   - `Player` enum: Sente (first player) and Gote (second player)

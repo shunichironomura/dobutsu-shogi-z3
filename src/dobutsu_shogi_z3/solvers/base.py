@@ -7,10 +7,10 @@ from typing import TYPE_CHECKING
 
 from z3 import Solver, is_true
 
-from tsume_shogi_solver.core import MoveData, PieceId, PieceState, PieceType, TimeIndex
-from tsume_shogi_solver.problems import Problem, Solution
-from tsume_shogi_solver.z3_constraints import GameRules
-from tsume_shogi_solver.z3_models import GameState
+from dobutsu_shogi_z3.core import MoveData, PieceId, PieceState, PieceType, TimeIndex
+from dobutsu_shogi_z3.problems import Problem, Solution
+from dobutsu_shogi_z3.z3_constraints import GameRules
+from dobutsu_shogi_z3.z3_models import GameState
 
 if TYPE_CHECKING:
     from z3.z3 import ModelRef

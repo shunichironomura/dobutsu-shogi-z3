@@ -66,7 +66,7 @@ The `solvers/` package contains specialized solver implementations:
 ## Usage
 
 ```python
-from tsume_shogi_solver import find_checkmate, find_shortest_mate
+from dobutsu_shogi_z3 import find_checkmate, find_shortest_mate
 
 # Find any checkmate
 solution = find_checkmate(max_moves=10)
@@ -85,8 +85,8 @@ if shortest:
 
 ```bash
 # Clone the repository
-git clone https://github.com/shunichironomura/tsume-shogi-solver.git
-cd tsume-shogi-solver
+git clone https://github.com/shunichironomura/dobutsu-shogi-z3.git
+cd dobutsu-shogi-z3
 
 # Install with uv (recommended)
 uv sync

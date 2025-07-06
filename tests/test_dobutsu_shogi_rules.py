@@ -5,10 +5,10 @@ from __future__ import annotations
 import pytest
 from z3 import Solver, sat
 
-from tsume_shogi_solver.constants import DEFAULT_INITIAL_SETUP
-from tsume_shogi_solver.core import Player, TimeIndex
-from tsume_shogi_solver.z3_constraints import GameRules
-from tsume_shogi_solver.z3_models import GameState
+from dobutsu_shogi_z3.constants import DEFAULT_INITIAL_SETUP
+from dobutsu_shogi_z3.core import Player, TimeIndex
+from dobutsu_shogi_z3.z3_constraints import GameRules
+from dobutsu_shogi_z3.z3_models import GameState
 
 
 @pytest.fixture
