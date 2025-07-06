@@ -1,0 +1,78 @@
+"""Reachability solver implementation."""
+
+from z3 import And, Or, sat
+
+from ..types import ReachabilityProblem, ReachabilitySolution, TimeIndex
+from .base import BaseSolver
+
+
+class ReachabilitySolver(BaseSolver):
+    """Proves piece can reach target position."""
+
+    def solve(self, problem: ReachabilityProblem) -> ReachabilitySolution | None:
+        """Solve reachability problem."""
+        if problem.max_moves <= 0:
+            return None
+
+        solver, state = self._create_base_solver(problem.max_moves, problem.initial_state)
+
+        # Add reachability constraint - piece must reach target at some point
+        reachability_conditions = []
+
+        for _t in range(problem.max_moves + 1):
+            t = TimeIndex(_t)
+            target_row, target_col = problem.target
+
+            piece_at_target = And(
+                state.piece_row[t, problem.piece_id] == target_row,
+                state.piece_col[t, problem.piece_id] == target_col,
+                state.piece_owner[t, problem.piece_id] == problem.player.value,
+                state.piece_captured[t, problem.piece_id] == False,
+            )
+            reachability_conditions.append(piece_at_target)
+
+        solver.add(Or(reachability_conditions))
+
+        if solver.check() == sat:
+            model = solver.model()
+
+            # Find the earliest time when target is reached
+            reached_time = None
+            for _t in range(problem.max_moves + 1):
+                t = TimeIndex(_t)
+                target_row, target_col = problem.target
+
+                if (model[state.piece_row[t, problem.piece_id]].as_long() == target_row and
+                    model[state.piece_col[t, problem.piece_id]].as_long() == target_col and
+                    model[state.piece_owner[t, problem.piece_id]].as_long() == problem.player.value and
+                    not model[state.piece_captured[t, problem.piece_id]]):
+                    reached_time = _t
+                    break
+
+            if reached_time is not None:
+                moves = self._extract_moves(model, state, reached_time)
+
+                return ReachabilitySolution(
+                    moves=moves,
+                    piece_id=problem.piece_id,
+                    reached=problem.target,
+                )
+
+        return None
+
+    def find_shortest_path(self, problem: ReachabilityProblem) -> ReachabilitySolution | None:
+        """Find shortest path to target."""
+        for n in range(1, problem.max_moves + 1):
+            reachability_problem = ReachabilityProblem(
+                initial_state=problem.initial_state,
+                piece_id=problem.piece_id,
+                target=problem.target,
+                player=problem.player,
+                max_moves=n,
+            )
+
+            solution = self.solve(reachability_problem)
+            if solution:
+                return solution
+
+        return None
