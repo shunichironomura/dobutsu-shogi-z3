@@ -85,20 +85,6 @@ class MoveVariables:
     captures: ArithRef  # -1 if no capture, else piece id being captured
 
 
-initial_setup = [
-    # Sente (bottom player) - Row 1
-    (0, PieceType.ELEPHANT, Player.SENTE, 1, 1),  # Elephant at bottom-left
-    (1, PieceType.LION, Player.SENTE, 1, 2),  # Lion at bottom-center
-    (2, PieceType.GIRAFFE, Player.SENTE, 1, 3),  # Giraffe at bottom-right
-    (3, PieceType.CHICK, Player.SENTE, 2, 2),  # Chick in front of Lion
-    # Gote (top player) - Row 4
-    (4, PieceType.GIRAFFE, Player.GOTE, 4, 1),  # Giraffe at top-left
-    (5, PieceType.LION, Player.GOTE, 4, 2),  # Lion at top-center
-    (6, PieceType.ELEPHANT, Player.GOTE, 4, 3),  # Elephant at top-right
-    (7, PieceType.CHICK, Player.GOTE, 3, 2),  # Chick in front of Lion
-]
-
-
 @dataclass(frozen=True, slots=True)
 class PieceState:
     """State of a piece in Dōbutsu Shōgi."""
@@ -108,6 +94,69 @@ class PieceState:
     piece_owner: PlayerId
     row: RowIndex
     col: ColIndex
+
+
+# Default initial board setup for Dōbutsu Shōgi
+DEFAULT_INITIAL_SETUP: list[PieceState] = [
+    # Sente (bottom player) - Row 1
+    PieceState(
+        piece_id=PieceId(0),
+        piece_type=PieceType.ELEPHANT,
+        piece_owner=Player.SENTE.value,
+        row=RowIndex(1),
+        col=ColIndex(1),
+    ),
+    PieceState(
+        piece_id=PieceId(1),
+        piece_type=PieceType.LION,
+        piece_owner=Player.SENTE.value,
+        row=RowIndex(1),
+        col=ColIndex(2),
+    ),
+    PieceState(
+        piece_id=PieceId(2),
+        piece_type=PieceType.GIRAFFE,
+        piece_owner=Player.SENTE.value,
+        row=RowIndex(1),
+        col=ColIndex(3),
+    ),
+    PieceState(
+        piece_id=PieceId(3),
+        piece_type=PieceType.CHICK,
+        piece_owner=Player.SENTE.value,
+        row=RowIndex(2),
+        col=ColIndex(2),
+    ),
+    # Gote (top player) - Row 4
+    PieceState(
+        piece_id=PieceId(4),
+        piece_type=PieceType.GIRAFFE,
+        piece_owner=Player.GOTE.value,
+        row=RowIndex(4),
+        col=ColIndex(1),
+    ),
+    PieceState(
+        piece_id=PieceId(5),
+        piece_type=PieceType.LION,
+        piece_owner=Player.GOTE.value,
+        row=RowIndex(4),
+        col=ColIndex(2),
+    ),
+    PieceState(
+        piece_id=PieceId(6),
+        piece_type=PieceType.ELEPHANT,
+        piece_owner=Player.GOTE.value,
+        row=RowIndex(4),
+        col=ColIndex(3),
+    ),
+    PieceState(
+        piece_id=PieceId(7),
+        piece_type=PieceType.CHICK,
+        piece_owner=Player.GOTE.value,
+        row=RowIndex(3),
+        col=ColIndex(2),
+    ),
+]
 
 
 @dataclass
@@ -122,6 +171,7 @@ class DobutsuShogiZ3:
     # Solver configuration
     solver: Solver = field(default_factory=Solver, init=False)
     max_moves: int = 20  # Maximum number of half-moves to search
+    initial_setup: list[PieceState] = field(default_factory=lambda: DEFAULT_INITIAL_SETUP.copy())
 
     # Variables
     piece_type: dict[PieceId, ArithRef] = field(default_factory=dict, init=False)
@@ -218,37 +268,17 @@ class DobutsuShogiZ3:
 
     def _add_initial_position(self) -> None:
         """Set up the initial board position."""
-        # Define initial pieces
-        # Board layout (from Sente's perspective):
-        # Row 4: Gote's back rank
-        # Row 3: Gote's Chick
-        # Row 2: Sente's Chick
-        # Row 1: Sente's back rank
-
-        initial_setup = [
-            # Sente (bottom player) - Row 1
-            (0, PieceType.ELEPHANT, Player.SENTE, 1, 1),  # Elephant at bottom-left
-            (1, PieceType.LION, Player.SENTE, 1, 2),  # Lion at bottom-center
-            (2, PieceType.GIRAFFE, Player.SENTE, 1, 3),  # Giraffe at bottom-right
-            (3, PieceType.CHICK, Player.SENTE, 2, 2),  # Chick in front of Lion
-            # Gote (top player) - Row 4
-            (4, PieceType.GIRAFFE, Player.GOTE, 4, 1),  # Giraffe at top-left
-            (5, PieceType.LION, Player.GOTE, 4, 2),  # Lion at top-center
-            (6, PieceType.ELEPHANT, Player.GOTE, 4, 3),  # Elephant at top-right
-            (7, PieceType.CHICK, Player.GOTE, 3, 2),  # Chick in front of Lion
-        ]
-
-        for _piece_id, ptype, owner, row, col in initial_setup:
-            piece_id = PieceId(_piece_id)
+        for piece_state in self.initial_setup:
+            piece_id = piece_state.piece_id
 
             # Static properties
-            self.solver.add(self.piece_type[piece_id] == ptype.value)
+            self.solver.add(self.piece_type[piece_id] == piece_state.piece_type.value)
 
             # Initial state
             initial_time_index = TimeIndex(0)
-            self.solver.add(self.piece_owner[initial_time_index, piece_id] == owner.value)
-            self.solver.add(self.piece_row[initial_time_index][piece_id] == row)
-            self.solver.add(self.piece_col[initial_time_index][piece_id] == col)
+            self.solver.add(self.piece_owner[initial_time_index, piece_id] == piece_state.piece_owner)
+            self.solver.add(self.piece_row[initial_time_index][piece_id] == piece_state.row)
+            self.solver.add(self.piece_col[initial_time_index][piece_id] == piece_state.col)
             self.solver.add(Not(self.piece_captured[initial_time_index][piece_id]))
             self.solver.add(Not(self.piece_promoted[initial_time_index][piece_id]))
             self.solver.add(self.piece_in_hand_of[initial_time_index][piece_id] == -1)  # On board
