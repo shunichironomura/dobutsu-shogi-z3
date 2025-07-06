@@ -176,17 +176,17 @@ class DobutsuShogiZ3:
     # Variables
     piece_type: dict[PieceId, ArithRef] = field(default_factory=dict, init=False)
     piece_owner: dict[tuple[TimeIndex, PieceId], ArithRef] = field(default_factory=dict, init=False)
-    piece_row: dict[TimeIndex, dict[PieceId, ArithRef]] = field(
+    piece_row: dict[tuple[TimeIndex, PieceId], ArithRef] = field(
         default_factory=dict,
         init=False,
-    )  # TODO: Change to (MoveIndex, PieceId) -> ArithRef. Row of piece at time t (1-indexed). 0 means piece is in hand.
-    piece_col: dict[TimeIndex, dict[PieceId, ArithRef]] = field(
+    )  # Row of piece at time t (1-indexed). 0 means piece is in hand.
+    piece_col: dict[tuple[TimeIndex, PieceId], ArithRef] = field(
         default_factory=dict,
         init=False,
     )  # Column of piece at time t (1-indexed). 0 means piece is in hand.
-    piece_captured: dict[TimeIndex, dict[PieceId, BoolRef]] = field(default_factory=dict, init=False)
-    piece_promoted: dict[TimeIndex, dict[PieceId, BoolRef]] = field(default_factory=dict, init=False)
-    piece_in_hand_of: dict[TimeIndex, dict[PieceId, ArithRef]] = field(
+    piece_captured: dict[tuple[TimeIndex, PieceId], BoolRef] = field(default_factory=dict, init=False)
+    piece_promoted: dict[tuple[TimeIndex, PieceId], BoolRef] = field(default_factory=dict, init=False)
+    piece_in_hand_of: dict[tuple[TimeIndex, PieceId], ArithRef] = field(
         default_factory=dict,
         init=False,
     )  # Which player holds this piece (-1 if on board)
@@ -215,29 +215,23 @@ class DobutsuShogiZ3:
 
         for _t in range(self.max_moves + 1):
             t = TimeIndex(_t)
-            self.piece_row[t] = {}
-            self.piece_col[t] = {}
-            self.piece_captured[t] = {}
-            self.piece_promoted[t] = {}
-            self.piece_in_hand_of[t] = {}
-
             for _p in range(self.N_PIECES):
                 p = PieceId(_p)
                 self.piece_owner[t, p] = Int(f"piece_{p}_owner_t{t}")
-                self.piece_row[t][p] = Int(f"piece_{p}_row_t{t}")
-                self.piece_col[t][p] = Int(f"piece_{p}_col_t{t}")
-                self.piece_captured[t][p] = Bool(f"piece_{p}_captured_t{t}")
-                self.piece_promoted[t][p] = Bool(f"piece_{p}_promoted_t{t}")
-                self.piece_in_hand_of[t][p] = Int(f"piece_{p}_in_hand_t{t}")
+                self.piece_row[t, p] = Int(f"piece_{p}_row_t{t}")
+                self.piece_col[t, p] = Int(f"piece_{p}_col_t{t}")
+                self.piece_captured[t, p] = Bool(f"piece_{p}_captured_t{t}")
+                self.piece_promoted[t, p] = Bool(f"piece_{p}_promoted_t{t}")
+                self.piece_in_hand_of[t, p] = Int(f"piece_{p}_in_hand_t{t}")
 
                 # Constraints
                 self.solver.add(Or(self.piece_owner[t, p] == 0, self.piece_owner[t, p] == 1))
-                self.solver.add(self.piece_row[t][p] >= 1)
-                self.solver.add(self.piece_row[t][p] <= self.ROWS)
-                self.solver.add(self.piece_col[t][p] >= 1)
-                self.solver.add(self.piece_col[t][p] <= self.COLS)
-                self.solver.add(self.piece_in_hand_of[t][p] >= -1)
-                self.solver.add(self.piece_in_hand_of[t][p] <= 1)
+                self.solver.add(self.piece_row[t, p] >= 1)
+                self.solver.add(self.piece_row[t, p] <= self.ROWS)
+                self.solver.add(self.piece_col[t, p] >= 1)
+                self.solver.add(self.piece_col[t, p] <= self.COLS)
+                self.solver.add(self.piece_in_hand_of[t, p] >= -1)
+                self.solver.add(self.piece_in_hand_of[t, p] <= 1)
 
         # Move representation
         for _t in range(self.max_moves):
@@ -277,11 +271,11 @@ class DobutsuShogiZ3:
             # Initial state
             initial_time_index = TimeIndex(0)
             self.solver.add(self.piece_owner[initial_time_index, piece_id] == piece_state.piece_owner)
-            self.solver.add(self.piece_row[initial_time_index][piece_id] == piece_state.row)
-            self.solver.add(self.piece_col[initial_time_index][piece_id] == piece_state.col)
-            self.solver.add(Not(self.piece_captured[initial_time_index][piece_id]))
-            self.solver.add(Not(self.piece_promoted[initial_time_index][piece_id]))
-            self.solver.add(self.piece_in_hand_of[initial_time_index][piece_id] == -1)  # On board
+            self.solver.add(self.piece_row[initial_time_index, piece_id] == piece_state.row)
+            self.solver.add(self.piece_col[initial_time_index, piece_id] == piece_state.col)
+            self.solver.add(Not(self.piece_captured[initial_time_index, piece_id]))
+            self.solver.add(Not(self.piece_promoted[initial_time_index, piece_id]))
+            self.solver.add(self.piece_in_hand_of[initial_time_index, piece_id] == -1)  # On board
 
     def _add_basic_constraints(self) -> None:
         """Add basic game constraints."""
@@ -294,10 +288,10 @@ class DobutsuShogiZ3:
                     p2 = PieceId(_p2)
                     self.solver.add(
                         Implies(
-                            And(Not(self.piece_captured[t][p1]), Not(self.piece_captured[t][p2])),
+                            And(Not(self.piece_captured[t, p1]), Not(self.piece_captured[t, p2])),
                             Or(
-                                self.piece_row[t][p1] != self.piece_row[t][p2],
-                                self.piece_col[t][p1] != self.piece_col[t][p2],
+                                self.piece_row[t, p1] != self.piece_row[t, p2],
+                                self.piece_col[t, p1] != self.piece_col[t, p2],
                             ),
                         ),
                     )
@@ -306,7 +300,7 @@ class DobutsuShogiZ3:
             for _p in range(self.N_PIECES):
                 p = PieceId(_p)
                 self.solver.add(
-                    self.piece_captured[t][p] == (self.piece_in_hand_of[t][p] >= 0),
+                    self.piece_captured[t, p] == (self.piece_in_hand_of[t, p] >= 0),
                 )
 
             # Only Chicks can be promoted (to Hen)
@@ -314,7 +308,7 @@ class DobutsuShogiZ3:
                 p = PieceId(_p)
                 self.solver.add(
                     Implies(
-                        self.piece_promoted[t][p],
+                        self.piece_promoted[t, p],
                         self.piece_type[p] == PieceType.CHICK.value,
                     ),
                 )
@@ -326,9 +320,9 @@ class DobutsuShogiZ3:
             p = PieceId(_p)
             # Square is occupied by piece p
             occupied_by_p = And(
-                Not(self.piece_captured[t][p]),
-                self.piece_row[t][p] == row,
-                self.piece_col[t][p] == col,
+                Not(self.piece_captured[t, p]),
+                self.piece_row[t, p] == row,
+                self.piece_col[t, p] == col,
             )
             # If occupied, must be opponent's piece
             square_conditions.append(
@@ -368,8 +362,8 @@ class DobutsuShogiZ3:
                             move.is_drop,
                             # Drop constraints
                             And(
-                                self.piece_captured[t][p],
-                                self.piece_in_hand_of[t][p] == current_player,
+                                self.piece_captured[t, p],
+                                self.piece_in_hand_of[t, p] == current_player,
                                 move.from_row == 0,
                                 move.from_col == 0,
                                 move.captures == -1,
@@ -378,9 +372,9 @@ class DobutsuShogiZ3:
                             ),
                             # Regular move constraints
                             And(
-                                Not(self.piece_captured[t][p]),
-                                move.from_row == self.piece_row[t][p],
-                                move.from_col == self.piece_col[t][p],
+                                Not(self.piece_captured[t, p]),
+                                move.from_row == self.piece_row[t, p],
+                                move.from_col == self.piece_col[t, p],
                                 self._valid_move_pattern(t, move, p),
                                 # Can't move to square with own piece
                                 self._square_empty_or_opponent(t, move.to_row, move.to_col, current_player),
@@ -412,7 +406,7 @@ class DobutsuShogiZ3:
 
         # Get piece type (considering promotion)
         effective_type = If(
-            self.piece_promoted[t][piece_id],
+            self.piece_promoted[t, piece_id],
             PieceType.HEN.value,
             self.piece_type[piece_id],
         )
@@ -476,12 +470,12 @@ class DobutsuShogiZ3:
             p = PieceId(_p)
             # Default: pieces stay in same state
             same_position = And(
-                self.piece_row[next_t][p] == self.piece_row[t][p],
-                self.piece_col[next_t][p] == self.piece_col[t][p],
+                self.piece_row[next_t, p] == self.piece_row[t, p],
+                self.piece_col[next_t, p] == self.piece_col[t, p],
             )
-            same_captured = self.piece_captured[next_t][p] == self.piece_captured[t][p]
-            same_promoted = self.piece_promoted[next_t][p] == self.piece_promoted[t][p]
-            same_hand = self.piece_in_hand_of[next_t][p] == self.piece_in_hand_of[t][p]
+            same_captured = self.piece_captured[next_t, p] == self.piece_captured[t, p]
+            same_promoted = self.piece_promoted[next_t, p] == self.piece_promoted[t, p]
+            same_hand = self.piece_in_hand_of[next_t, p] == self.piece_in_hand_of[t, p]
 
             # Moving piece
             is_moving = move.piece_id == p
@@ -498,10 +492,10 @@ class DobutsuShogiZ3:
                     is_moving,
                     # This piece is moving
                     And(
-                        self.piece_row[next_t][p] == move.to_row,
-                        self.piece_col[next_t][p] == move.to_col,
-                        self.piece_captured[next_t][p] == False,
-                        self.piece_in_hand_of[next_t][p] == -1,
+                        self.piece_row[next_t, p] == move.to_row,
+                        self.piece_col[next_t, p] == move.to_col,
+                        self.piece_captured[next_t, p] == False,
+                        self.piece_in_hand_of[next_t, p] == -1,
                         self.piece_owner[next_t, p] == self.piece_owner[t, p],  # Owner stays same when moving
                         # Check promotion (Chick reaching last rank)
                         If(
@@ -512,7 +506,7 @@ class DobutsuShogiZ3:
                                     And(self.piece_owner[t, p] == Player.GOTE.value, move.to_row == 1),
                                 ),
                             ),
-                            self.piece_promoted[next_t][p] == True,
+                            self.piece_promoted[next_t, p] == True,
                             same_promoted,
                         ),
                     ),
@@ -520,9 +514,9 @@ class DobutsuShogiZ3:
                         is_captured,
                         # This piece is being captured
                         And(
-                            self.piece_captured[next_t][p] == True,
-                            self.piece_in_hand_of[next_t][p] == (t % 2),  # Current player
-                            self.piece_promoted[next_t][p] == False,  # Demoted when captured
+                            self.piece_captured[next_t, p] == True,
+                            self.piece_in_hand_of[next_t, p] == (t % 2),  # Current player
+                            self.piece_promoted[next_t, p] == False,  # Demoted when captured
                             self.piece_owner[next_t, p] == (t % 2),  # Ownership changes to capturing player!
                             same_position,  # Position doesn't matter when captured
                         ),
@@ -546,10 +540,10 @@ class DobutsuShogiZ3:
             self.solver.add(
                 Implies(
                     And(
-                        Not(self.piece_captured[t][p]),
+                        Not(self.piece_captured[t, p]),
                         p != move.piece_id,
-                        self.piece_row[t][p] == move.to_row,
-                        self.piece_col[t][p] == move.to_col,
+                        self.piece_row[t, p] == move.to_row,
+                        self.piece_col[t, p] == move.to_col,
                         self.piece_owner[t, p] != current_player,
                     ),  # Must be opponent's piece!
                     move.captures == p,
@@ -560,10 +554,10 @@ class DobutsuShogiZ3:
         no_valid_capture = And(
             *[
                 Or(
-                    self.piece_captured[t][PieceId(p)],
+                    self.piece_captured[t, PieceId(p)],
                     p == move.piece_id,
-                    self.piece_row[t][PieceId(p)] != move.to_row,
-                    self.piece_col[t][PieceId(p)] != move.to_col,
+                    self.piece_row[t, PieceId(p)] != move.to_row,
+                    self.piece_col[t, PieceId(p)] != move.to_col,
                     self.piece_owner[t, PieceId(p)] == current_player,
                 )  # Can't capture own pieces
                 for p in range(self.N_PIECES)
@@ -589,7 +583,7 @@ class DobutsuShogiZ3:
                 self.piece_owner[t, p] != current_player,
             )
             victory_conditions.append(
-                And(is_opponent_lion, self.piece_captured[t][p]),
+                And(is_opponent_lion, self.piece_captured[t, p]),
             )
 
             # Victory by reaching opponent's back rank
@@ -599,8 +593,8 @@ class DobutsuShogiZ3:
             )
             reaches_back_rank = If(
                 current_player == Player.SENTE.value,
-                self.piece_row[t][p] == self.ROWS,  # Row 4 for Sente
-                self.piece_row[t][p] == 1,  # Row 1 for Gote
+                self.piece_row[t, p] == self.ROWS,  # Row 4 for Sente
+                self.piece_row[t, p] == 1,  # Row 1 for Gote
             )
 
             # Simplified check detection - Lion is safe if no opponent piece can capture it
@@ -608,7 +602,7 @@ class DobutsuShogiZ3:
             lion_safe = True  # Simplified for now
 
             victory_conditions.append(
-                And(is_own_lion, Not(self.piece_captured[t][p]), reaches_back_rank, lion_safe),
+                And(is_own_lion, Not(self.piece_captured[t, p]), reaches_back_rank, lion_safe),
             )
 
         return Or(victory_conditions)
@@ -694,8 +688,8 @@ class DobutsuShogiZ3:
             for _p in range(self.N_PIECES):
                 p = PieceId(_p)
                 if model[self.piece_type[p]].as_long() == PieceType.LION.value:
-                    captured = is_true(model[self.piece_captured[n][p]])
-                    row = model[self.piece_row[n][p]].as_long()
+                    captured = is_true(model[self.piece_captured[n, p]])
+                    row = model[self.piece_row[n, p]].as_long()
                     owner = model[self.piece_owner[n, p]].as_long()
                     print(f"  Lion {p} (owner={owner}): captured={captured}, row={row}")
 
@@ -715,7 +709,7 @@ class DobutsuShogiZ3:
                 self.piece_owner[t, p] != winning_player,  # Opponent's Lion
             )
             victory_conditions.append(
-                And(is_opponent_lion, self.piece_captured[t][p]),
+                And(is_opponent_lion, self.piece_captured[t, p]),
             )
 
             # Victory by reaching opponent's back rank
@@ -725,13 +719,13 @@ class DobutsuShogiZ3:
             )
             reaches_back_rank = If(
                 winning_player == Player.SENTE.value,
-                self.piece_row[t][p] == self.ROWS,  # Row 4 for Sente
-                self.piece_row[t][p] == 1,  # Row 1 for Gote
+                self.piece_row[t, p] == self.ROWS,  # Row 4 for Sente
+                self.piece_row[t, p] == 1,  # Row 1 for Gote
             )
 
             # Simplified: assume Lion is safe at back rank
             victory_conditions.append(
-                And(is_own_lion, Not(self.piece_captured[t][p]), reaches_back_rank),
+                And(is_own_lion, Not(self.piece_captured[t, p]), reaches_back_rank),
             )
 
         return Or(victory_conditions)
@@ -756,12 +750,12 @@ class DobutsuShogiZ3:
 
         for _p in range(self.N_PIECES):
             p = PieceId(_p)
-            if not is_true(model[self.piece_captured[t][p]]):
-                row = model[self.piece_row[t][p]].as_long() - 1
-                col = model[self.piece_col[t][p]].as_long() - 1
+            if not is_true(model[self.piece_captured[t, p]]):
+                row = model[self.piece_row[t, p]].as_long() - 1
+                col = model[self.piece_col[t, p]].as_long() - 1
                 ptype = model[self.piece_type[p]].as_long()
                 owner = model[self.piece_owner[t, p]].as_long()
-                promoted = is_true(model[self.piece_promoted[t][p]])
+                promoted = is_true(model[self.piece_promoted[t, p]])
 
                 board[row][col] = pieces_symbols.get((ptype, owner, promoted), " ? ")
 
@@ -774,8 +768,8 @@ class DobutsuShogiZ3:
         gote_hand = []
         for _p in range(self.N_PIECES):
             p = PieceId(_p)
-            if is_true(model[self.piece_captured[t][p]]):
-                holder = model[self.piece_in_hand_of[t][p]].as_long()
+            if is_true(model[self.piece_captured[t, p]]):
+                holder = model[self.piece_in_hand_of[t, p]].as_long()
                 ptype = model[self.piece_type[p]].as_long()
                 piece_names = ["Lion", "Giraffe", "Elephant", "Chick"]
                 if holder == 0:

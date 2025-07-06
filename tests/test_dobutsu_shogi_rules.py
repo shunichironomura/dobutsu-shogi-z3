@@ -50,10 +50,10 @@ def test_initial_board_setup(solver):
     for piece_id, (expected_type, expected_owner, expected_row, expected_col) in expected_positions.items():
         piece_type = model[solver.piece_type[piece_id]].as_long()
         owner = model[solver.piece_owner[t, piece_id]].as_long()
-        row = model[solver.piece_row[t][piece_id]].as_long()
-        col = model[solver.piece_col[t][piece_id]].as_long()
-        captured = is_true(model[solver.piece_captured[t][piece_id]])
-        promoted = is_true(model[solver.piece_promoted[t][piece_id]])
+        row = model[solver.piece_row[t, piece_id]].as_long()
+        col = model[solver.piece_col[t, piece_id]].as_long()
+        captured = is_true(model[solver.piece_captured[t, piece_id]])
+        promoted = is_true(model[solver.piece_promoted[t, piece_id]])
 
         assert piece_type == expected_type.value
         assert owner == expected_owner.value
@@ -213,7 +213,7 @@ def test_chick_promotion(solver):
         model = s.model()
 
         # Check that Chick is promoted after reaching row 4
-        promoted_at_t3 = is_true(model[solver.piece_promoted[TimeIndex(3)][PieceId(3)]])
+        promoted_at_t3 = is_true(model[solver.piece_promoted[TimeIndex(3), PieceId(3)]])
         assert promoted_at_t3, "Chick should be promoted after reaching back rank"
 
 
@@ -244,8 +244,8 @@ def test_capture_mechanics(solver):
     model = s.model()
 
     # Verify Gote's Chick is captured at t=1
-    captured = is_true(model[solver.piece_captured[TimeIndex(1)][PieceId(7)]])
-    in_hand = model[solver.piece_in_hand_of[TimeIndex(1)][PieceId(7)]].as_long()
+    captured = is_true(model[solver.piece_captured[TimeIndex(1), PieceId(7)]])
+    in_hand = model[solver.piece_in_hand_of[TimeIndex(1), PieceId(7)]].as_long()
 
     assert captured, "Gote's Chick should be captured"
     assert in_hand == 0, "Captured piece should be in Sente's hand"
