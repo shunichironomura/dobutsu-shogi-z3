@@ -2,16 +2,37 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from z3 import Not, sat
 
-from dobutsu_shogi_z3.core import Player, TimeIndex
-from dobutsu_shogi_z3.problems import CheckmateProblem, CheckmateSolution
+from dobutsu_shogi_z3.core import MoveData, PieceState, Player, TimeIndex
 from dobutsu_shogi_z3.z3_constraints import GameRules
 
-from .base import BaseSolver
+from .utils import create_base_solver, extract_moves
 
 
-class CheckmateSolver(BaseSolver[CheckmateProblem, CheckmateSolution]):
+# Problem Types
+@dataclass(frozen=True)
+class CheckmateProblem:
+    """Problem specification for finding checkmate."""
+
+    initial_state: list[PieceState]
+    winning_player: Player
+    max_moves: int
+
+
+# Solution Types
+@dataclass(frozen=True)
+class CheckmateSolution:
+    """Solution for checkmate problem."""
+
+    moves: list[MoveData]
+    winning_player: Player
+    mate_in: int
+
+
+class CheckmateSolver:
     """Finds forced checkmate sequences."""
 
     def solve(self, problem: CheckmateProblem) -> CheckmateSolution | None:
@@ -24,7 +45,7 @@ class CheckmateSolver(BaseSolver[CheckmateProblem, CheckmateSolution]):
         if last_player != problem.winning_player.value:
             return None
 
-        solver, state = self._create_base_solver(problem.max_moves, problem.initial_state)
+        solver, state = create_base_solver(problem.max_moves, problem.initial_state)
 
         # Add victory condition at the end for winning player
         victory_condition = GameRules.victory_conditions(
@@ -41,7 +62,7 @@ class CheckmateSolver(BaseSolver[CheckmateProblem, CheckmateSolution]):
 
         if solver.check() == sat:
             model = solver.model()
-            moves = self._extract_moves(model, state, problem.max_moves)
+            moves = extract_moves(model, state, problem.max_moves)
 
             return CheckmateSolution(
                 moves=moves,

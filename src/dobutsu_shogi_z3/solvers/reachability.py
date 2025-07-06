@@ -2,15 +2,36 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from z3 import And, Or, sat
 
-from dobutsu_shogi_z3.core import TimeIndex
-from dobutsu_shogi_z3.problems import ReachabilityProblem, ReachabilitySolution
+from dobutsu_shogi_z3.core import MoveData, PieceId, PieceState, Player, Position, TimeIndex
 
-from .base import BaseSolver
+from .utils import create_base_solver, extract_moves
 
 
-class ReachabilitySolver(BaseSolver[ReachabilityProblem, ReachabilitySolution]):
+@dataclass(frozen=True)
+class ReachabilityProblem:
+    """Problem specification for proving piece reachability."""
+
+    initial_state: list[PieceState]
+    piece_id: PieceId
+    target: Position
+    player: Player
+    max_moves: int
+
+
+@dataclass(frozen=True)
+class ReachabilitySolution:
+    """Solution for reachability problem."""
+
+    moves: list[MoveData]
+    piece_id: PieceId
+    reached: Position
+
+
+class ReachabilitySolver:
     """Proves piece can reach target position."""
 
     def solve(self, problem: ReachabilityProblem) -> ReachabilitySolution | None:
@@ -18,7 +39,7 @@ class ReachabilitySolver(BaseSolver[ReachabilityProblem, ReachabilitySolution]):
         if problem.max_moves <= 0:
             return None
 
-        solver, state = self._create_base_solver(problem.max_moves, problem.initial_state)
+        solver, state = create_base_solver(problem.max_moves, problem.initial_state)
 
         # Add reachability constraint - piece must reach target at some point
         reachability_conditions = []
@@ -56,7 +77,7 @@ class ReachabilitySolver(BaseSolver[ReachabilityProblem, ReachabilitySolution]):
                     break
 
             if reached_time is not None:
-                moves = self._extract_moves(model, state, reached_time)
+                moves = extract_moves(model, state, reached_time)
 
                 return ReachabilitySolution(
                     moves=moves,

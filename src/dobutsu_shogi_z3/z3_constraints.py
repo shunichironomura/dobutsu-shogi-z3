@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 from z3 import Abs, And, BoolRef, If, Implies, Not, Or
 
-from .core import PieceId, PieceType, Player, TimeIndex
+from .core import PieceId, PieceType, Player, PlayerId, TimeIndex
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -43,7 +43,7 @@ class GameRules:
 
         for _t in range(state.max_moves):
             t = TimeIndex(_t)
-            current_player = _t % 2  # 0 for Sente, 1 for Gote
+            current_player = PlayerId(_t % 2)  # 0 for Sente, 1 for Gote
 
             # Moving piece must belong to current player
             constraints.extend(GameRules._player_ownership_constraints(state, t, current_player))
@@ -86,6 +86,7 @@ class GameRules:
             victory_conditions.append(
                 And(is_own_lion, Not(state.piece_captured[t, p]), reaches_back_rank),
             )
+            # TODO: Own lion should not be captured in the next turn
 
         return Or(victory_conditions)
 
@@ -95,24 +96,23 @@ class GameRules:
         """Generate constraints ensuring no two pieces occupy same square."""
         constraints = []
 
-        for _t in range(state.max_moves + 1):
+        for _t, _p1 in product(range(state.max_moves + 1), range(state.N_PIECES)):
             t = TimeIndex(_t)
-            for _p1 in range(state.N_PIECES):
-                p1 = PieceId(_p1)
-                for _p2 in range(_p1 + 1, state.N_PIECES):
-                    p2 = PieceId(_p2)
-                    constraints.append(
-                        Implies(
-                            And(
-                                Not(state.piece_captured[t, p1]),
-                                Not(state.piece_captured[t, p2]),
-                            ),
-                            Or(
-                                state.piece_row[t, p1] != state.piece_row[t, p2],
-                                state.piece_col[t, p1] != state.piece_col[t, p2],
-                            ),
+            p1 = PieceId(_p1)
+            for _p2 in range(_p1 + 1, state.N_PIECES):
+                p2 = PieceId(_p2)
+                constraints.append(
+                    Implies(
+                        And(
+                            Not(state.piece_captured[t, p1]),
+                            Not(state.piece_captured[t, p2]),
                         ),
-                    )
+                        Or(
+                            state.piece_row[t, p1] != state.piece_row[t, p2],
+                            state.piece_col[t, p1] != state.piece_col[t, p2],
+                        ),
+                    ),
+                )
 
         return constraints
 
@@ -127,6 +127,7 @@ class GameRules:
             constraints.append(
                 state.piece_captured[t_idx, p_id] == (state.piece_in_hand_of[t_idx, p_id] >= 0),
             )
+            # Doesn't this mean `piece_captured` is redundant?
 
         return constraints
 
@@ -148,7 +149,7 @@ class GameRules:
         return constraints
 
     @staticmethod
-    def _player_ownership_constraints(state: GameState, t: TimeIndex, current_player: int) -> list[BoolRef]:
+    def _player_ownership_constraints(state: GameState, t: TimeIndex, current_player: PlayerId) -> list[BoolRef]:
         """Generate constraints for player piece ownership."""
         constraints = []
         move = state.moves[t]
@@ -165,7 +166,7 @@ class GameRules:
         return constraints
 
     @staticmethod
-    def _move_type_constraints(state: GameState, t: TimeIndex, current_player: int) -> list[BoolRef]:
+    def _move_type_constraints(state: GameState, t: TimeIndex, current_player: PlayerId) -> list[BoolRef]:
         """Handle regular moves vs drops."""
         constraints = []
         move = state.moves[t]
@@ -184,7 +185,7 @@ class GameRules:
                             move.from_row == 0,
                             move.from_col == 0,
                             move.captures == -1,
-                            GameRules._square_empty_or_opponent(state, t, move.to_row, move.to_col, current_player),
+                            GameRules._square_empty(state, t, move.to_row, move.to_col),
                         ),
                         # Regular move constraints
                         And(
@@ -199,6 +200,27 @@ class GameRules:
             )
 
         return constraints
+
+    @staticmethod
+    def _square_empty(
+        state: GameState,
+        t: TimeIndex,
+        row: ArithRef,
+        col: ArithRef,
+    ) -> BoolRef:
+        """Check if square is empty."""
+        square_conditions = []
+
+        for _p in range(state.N_PIECES):
+            p = PieceId(_p)
+            occupied_by_p = And(
+                Not(state.piece_captured[t, p]),
+                state.piece_row[t, p] == row,
+                state.piece_col[t, p] == col,
+            )
+            square_conditions.append(Not(occupied_by_p))
+
+        return And(square_conditions)
 
     @staticmethod
     def _square_empty_or_opponent(
@@ -307,7 +329,7 @@ class GameRules:
         constraints = []
         move = state.moves[t]
         next_t = TimeIndex(t + 1)
-        current_player = t % 2
+        current_player = PlayerId(t % 2)
 
         for _p in range(state.N_PIECES):
             p = PieceId(_p)
@@ -378,7 +400,7 @@ class GameRules:
         """Handle capture logic."""
         constraints = []
         move = state.moves[t]
-        current_player = t % 2
+        current_player = PlayerId(t % 2)
 
         # Determine what piece is captured
         for _p in range(state.N_PIECES):
@@ -412,29 +434,3 @@ class GameRules:
         constraints.append(Implies(no_valid_capture, move.captures == -1))
 
         return constraints
-
-
-# Constraint combinators for functional programming
-def for_all_pieces(
-    constraint_fn: Callable[[GameState, TimeIndex, PieceId], BoolRef],
-) -> Callable[[GameState, TimeIndex], BoolRef]:
-    """Apply constraint to all pieces."""
-    return lambda state, t: And([constraint_fn(state, t, PieceId(p)) for p in range(state.N_PIECES)])
-
-
-def for_all_times(
-    constraint_fn: Callable[[GameState, TimeIndex], BoolRef],
-) -> Callable[[GameState], BoolRef]:
-    """Apply constraint to all time steps."""
-    return lambda state: And([constraint_fn(state, TimeIndex(t)) for t in range(state.max_moves)])
-
-
-def implies_for_piece(
-    piece_id: int,
-    constraint_fn: Callable[[GameState, TimeIndex, PieceId], BoolRef],
-) -> Callable[[GameState, TimeIndex, PieceId], BoolRef]:
-    """Apply constraint only when piece_id matches."""
-    return lambda state, t, p: Implies(
-        p == piece_id,
-        constraint_fn(state, t, p),
-    )

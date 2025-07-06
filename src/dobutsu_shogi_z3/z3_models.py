@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from itertools import product
 from typing import TYPE_CHECKING
 
 from z3 import Bool, Int
@@ -53,31 +54,21 @@ class GameState:
 
     def __post_init__(self) -> None:
         """Initialize all Z3 variables."""
-        self._create_variables()
-
-    @classmethod
-    def create(cls, max_moves: int) -> GameState:
-        """Create and initialize all Z3 variables."""
-        return cls(max_moves=max_moves)
-
-    def _create_variables(self) -> None:
-        """Create all Z3 variables with proper constraints."""
         # Static piece properties
         for _p in range(self.N_PIECES):
             p = PieceId(_p)
             self.piece_type[p] = Int(f"piece_{p}_type")
 
         # Dynamic state variables
-        for _t in range(self.max_moves + 1):
+        for _t, _p in product(range(self.max_moves + 1), range(self.N_PIECES)):
             t = TimeIndex(_t)
-            for _p in range(self.N_PIECES):
-                p = PieceId(_p)
-                self.piece_owner[t, p] = Int(f"piece_{p}_owner_t{t}")
-                self.piece_row[t, p] = Int(f"piece_{p}_row_t{t}")
-                self.piece_col[t, p] = Int(f"piece_{p}_col_t{t}")
-                self.piece_captured[t, p] = Bool(f"piece_{p}_captured_t{t}")
-                self.piece_promoted[t, p] = Bool(f"piece_{p}_promoted_t{t}")
-                self.piece_in_hand_of[t, p] = Int(f"piece_{p}_in_hand_t{t}")
+            p = PieceId(_p)
+            self.piece_owner[t, p] = Int(f"piece_{p}_owner_t{t}")
+            self.piece_row[t, p] = Int(f"piece_{p}_row_t{t}")
+            self.piece_col[t, p] = Int(f"piece_{p}_col_t{t}")
+            self.piece_captured[t, p] = Bool(f"piece_{p}_captured_t{t}")
+            self.piece_promoted[t, p] = Bool(f"piece_{p}_promoted_t{t}")
+            self.piece_in_hand_of[t, p] = Int(f"piece_{p}_in_hand_t{t}")
 
         # Move variables
         for _t in range(self.max_moves):
@@ -97,57 +88,57 @@ class GameState:
         constraints = []
 
         # Piece type constraints
-        for p in range(self.N_PIECES):
-            piece_id = PieceId(p)
-            constraints.extend([
-                self.piece_type[piece_id] >= PieceType.min_value(),
-                self.piece_type[piece_id] <= PieceType.max_value(),
-            ])
+        for _p in range(self.N_PIECES):
+            piece_id = PieceId(_p)
+            constraints.extend(
+                [
+                    self.piece_type[piece_id] >= PieceType.min_value_basic(),
+                    self.piece_type[piece_id] <= PieceType.max_value_basic(),
+                ],
+            )
 
         # Position and state constraints
-        for _t in range(self.max_moves + 1):
+        for _t, _p in product(range(self.max_moves + 1), range(self.N_PIECES)):
             t = TimeIndex(_t)
-            for _p in range(self.N_PIECES):
-                p = PieceId(_p)
-                constraints.extend([
+            p = PieceId(_p)
+            constraints.extend(
+                [
                     # Owner constraints
                     self.piece_owner[t, p] >= 0,
                     self.piece_owner[t, p] <= 1,
-
                     # Position constraints
                     self.piece_row[t, p] >= 1,
                     self.piece_row[t, p] <= self.ROWS,
                     self.piece_col[t, p] >= 1,
                     self.piece_col[t, p] <= self.COLS,
-
                     # Hand constraints
-                    self.piece_in_hand_of[t, p] >= -1,
+                    self.piece_in_hand_of[t, p] >= -1,  # -1 means on board
                     self.piece_in_hand_of[t, p] <= 1,
-                ])
+                ],
+            )
 
         # Move constraints
         for _t in range(self.max_moves):
-            t = TimeIndex(_t)
-            move = self.moves[t]
-            constraints.extend([
-                # Piece ID constraints
-                move.piece_id >= 0,
-                move.piece_id < self.N_PIECES,
-
-                # Position constraints
-                move.from_row >= 0,
-                move.from_row <= self.ROWS,
-                move.from_col >= 0,
-                move.from_col <= self.COLS,
-                move.to_row >= 1,
-                move.to_row <= self.ROWS,
-                move.to_col >= 1,
-                move.to_col <= self.COLS,
-
-                # Capture constraints
-                move.captures >= -1,
-                move.captures < self.N_PIECES,
-            ])
+            move = self.moves[TimeIndex(_t)]
+            constraints.extend(
+                [
+                    # Piece ID constraints
+                    move.piece_id >= 0,
+                    move.piece_id < self.N_PIECES,
+                    # Position constraints
+                    move.from_row >= 0,
+                    move.from_row <= self.ROWS,
+                    move.from_col >= 0,
+                    move.from_col <= self.COLS,
+                    move.to_row >= 1,
+                    move.to_row <= self.ROWS,
+                    move.to_col >= 1,
+                    move.to_col <= self.COLS,
+                    # Capture constraints
+                    move.captures >= -1,  # -1 means no capture
+                    move.captures < self.N_PIECES,
+                ],
+            )
 
         return constraints
 
@@ -165,13 +156,15 @@ class GameState:
 
             # Initial state at t=0
             t = TimeIndex(0)
-            constraints.extend([
-                self.piece_owner[t, piece_id] == piece_state.piece_owner,
-                self.piece_row[t, piece_id] == piece_state.row,
-                self.piece_col[t, piece_id] == piece_state.col,
-                self.piece_captured[t, piece_id] == False,
-                self.piece_promoted[t, piece_id] == False,
-                self.piece_in_hand_of[t, piece_id] == -1,  # On board
-            ])
+            constraints.extend(
+                [
+                    self.piece_owner[t, piece_id] == piece_state.piece_owner,
+                    self.piece_row[t, piece_id] == piece_state.row,
+                    self.piece_col[t, piece_id] == piece_state.col,
+                    self.piece_captured[t, piece_id] == False,
+                    self.piece_promoted[t, piece_id] == False,
+                    self.piece_in_hand_of[t, piece_id] == -1,  # On board
+                ],
+            )
 
         return constraints

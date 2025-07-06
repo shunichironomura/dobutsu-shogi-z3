@@ -14,7 +14,7 @@ from dobutsu_shogi_z3.z3_models import GameState
 @pytest.fixture
 def solver() -> tuple[Solver, GameState]:
     """Create a solver with basic game constraints."""
-    state = GameState.create(max_moves=10)
+    state = GameState(max_moves=10)
     solver = Solver()
 
     # Add basic constraints

@@ -26,14 +26,14 @@ class PieceType(Enum):
     HEN = PieceTypeId(4)
 
     @classmethod
-    def min_value(cls) -> PieceTypeId:
-        """Get the minimum value of the enum."""
-        return min(member.value for member in cls)
+    def min_value_basic(cls) -> PieceTypeId:
+        """Get the minimum value of the basic piece types."""
+        return cls.LION.value
 
     @classmethod
-    def max_value(cls) -> PieceTypeId:
-        """Get the maximum value of the enum."""
-        return max(member.value for member in cls)
+    def max_value_basic(cls) -> PieceTypeId:
+        """Get the maximum value of the basic piece types."""
+        return cls.CHICK.value
 
 
 class Player(Enum):
