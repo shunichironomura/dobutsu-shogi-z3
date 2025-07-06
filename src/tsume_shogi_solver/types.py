@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, NewType, Protocol, Union
+from typing import TYPE_CHECKING, NewType, Protocol
 
 if TYPE_CHECKING:
     from z3.z3 import ArithRef, BoolRef
@@ -145,7 +145,7 @@ class TsumeSolution:
 
 
 # Union type for all solutions
-Solution = Union[CheckmateSolution, ReachabilitySolution, TsumeSolution]
+Solution = CheckmateSolution | ReachabilitySolution | TsumeSolution
 
 
 # Solver Protocol

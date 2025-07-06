@@ -16,3 +16,5 @@ Tasks are sorted by logical order, so please follow the sequence to ensure a smo
 - [x] Use defined type for initial board state setup. The initial implementation is done in `PieceState` class, so proceed with that.
 - [x] I don't like some of the variables are structured as nested dictionaries, so refactor the code to use flat dictionaries with tuple keys.
 - [x] Refactor the code so that users can easily use it for various purposes, such as proving a checkmate (Tsume), proving a reachability of a piece to a cell, or solving a Tsume Shogi problem. Use algebraic typing as much as possible. Try to minimize the size of the code without adding unnecessary complexity.
+- [x] Run `uv run ruff check` and fix any linting issues.
+- [x] Run `uv run mypy .` and fix any type checking issues.

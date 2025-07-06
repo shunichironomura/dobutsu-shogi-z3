@@ -10,7 +10,7 @@ from tsume_shogi_solver.types import CheckmateProblem, CheckmateSolution, Player
 from .base import BaseSolver
 
 
-class CheckmateSolver(BaseSolver):
+class CheckmateSolver(BaseSolver[CheckmateProblem, CheckmateSolution]):
     """Finds forced checkmate sequences."""
 
     def solve(self, problem: CheckmateProblem) -> CheckmateSolution | None:

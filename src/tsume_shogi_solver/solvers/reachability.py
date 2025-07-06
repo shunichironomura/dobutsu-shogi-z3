@@ -9,7 +9,7 @@ from tsume_shogi_solver.types import ReachabilityProblem, ReachabilitySolution, 
 from .base import BaseSolver
 
 
-class ReachabilitySolver(BaseSolver):
+class ReachabilitySolver(BaseSolver[ReachabilityProblem, ReachabilitySolution]):
     """Proves piece can reach target position."""
 
     def solve(self, problem: ReachabilityProblem) -> ReachabilitySolution | None:

@@ -415,17 +415,24 @@ class GameRules:
 
 
 # Constraint combinators for functional programming
-def for_all_pieces(constraint_fn: Callable) -> Callable:
+def for_all_pieces(
+    constraint_fn: Callable[[GameState, TimeIndex, PieceId], BoolRef],
+) -> Callable[[GameState, TimeIndex], BoolRef]:
     """Apply constraint to all pieces."""
     return lambda state, t: And([constraint_fn(state, t, PieceId(p)) for p in range(state.N_PIECES)])
 
 
-def for_all_times(constraint_fn: Callable) -> Callable:
+def for_all_times(
+    constraint_fn: Callable[[GameState, TimeIndex], BoolRef],
+) -> Callable[[GameState], BoolRef]:
     """Apply constraint to all time steps."""
     return lambda state: And([constraint_fn(state, TimeIndex(t)) for t in range(state.max_moves)])
 
 
-def implies_for_piece(piece_id: int, constraint_fn: Callable) -> Callable:
+def implies_for_piece(
+    piece_id: int,
+    constraint_fn: Callable[[GameState, TimeIndex, PieceId], BoolRef],
+) -> Callable[[GameState, TimeIndex, PieceId], BoolRef]:
     """Apply constraint only when piece_id matches."""
     return lambda state, t, p: Implies(
         p == piece_id,

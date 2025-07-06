@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from z3.z3 import BoolRef
 
 
-class TsumeSolver(BaseSolver):
+class TsumeSolver(BaseSolver[TsumeProblem, TsumeSolution]):
     """General constraint-based problem solver."""
 
     def solve(self, problem: TsumeProblem) -> TsumeSolution | None:

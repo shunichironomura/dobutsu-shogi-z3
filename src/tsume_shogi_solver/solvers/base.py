@@ -9,19 +9,17 @@ from z3 import Solver, is_true
 
 from tsume_shogi_solver.game_rules import GameRules
 from tsume_shogi_solver.game_state import GameState
-from tsume_shogi_solver.types import MoveData, PieceId, PieceState, PieceType, TimeIndex
+from tsume_shogi_solver.types import MoveData, PieceId, PieceState, PieceType, Problem, Solution, TimeIndex
 
 if TYPE_CHECKING:
     from z3.z3 import ModelRef
 
-    from tsume_shogi_solver.types import Problem, Solution
 
-
-class BaseSolver(ABC):
+class BaseSolver[P: Problem, S: Solution](ABC):
     """Base class for all solvers."""
 
     @abstractmethod
-    def solve(self, problem: Problem) -> Solution | None:
+    def solve(self, problem: P) -> S | None:
         """Solve the given problem."""
 
     def _create_base_solver(self, max_moves: int, initial_state: list[PieceState]) -> tuple[Solver, GameState]:
