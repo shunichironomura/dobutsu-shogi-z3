@@ -1,10 +1,10 @@
 # Tsume Shogi Solver
 
-A DMbutsu ShMgi (Animal Chess) solver that uses the Z3 SMT solver to find mate-in-n solutions.
+A Dōbutsu Shōgi (Animal Chess) solver that uses the Z3 SMT solver to find mate-in-n solutions.
 
 ## Overview
 
-This project implements a complete solver for DMbutsu ShMgi problems, capable of:
+This project implements a complete solver for Dōbutsu Shōgi problems, capable of:
 
 - Finding checkmate sequences
 - Analyzing piece reachability
