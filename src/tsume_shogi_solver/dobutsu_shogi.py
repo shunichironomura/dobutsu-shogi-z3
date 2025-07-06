@@ -1,21 +1,22 @@
 """Dōbutsu Shōgi (Animal Chess) - Complete Z3 Model."""
 
+from __future__ import annotations
+
+from dataclasses import dataclass, field
 from enum import Enum
-from typing import TYPE_CHECKING, Literal, NewType, TypedDict
+from typing import TYPE_CHECKING, ClassVar, Literal, NewType, TypedDict
 
 from z3 import Abs, And, Bool, BoolRef, If, Implies, Int, Not, Or, Solver, is_true, sat
 
 if TYPE_CHECKING:
     from z3.z3 import ArithRef
 
-# ===========================================================================
-# Dōbutsu Shōgi (Animal Chess) - Complete Z3 Model
-# ===========================================================================
-
 PieceId = NewType("PieceId", int)
 PieceTypeId = NewType("PieceTypeId", int)
 PlayerId = NewType("PlayerId", int)
-MoveIndex = NewType("MoveIndex", int)
+TimeIndex = NewType("TimeIndex", int)
+ColIndex = NewType("ColIndex", int)
+RowIndex = NewType("RowIndex", int)
 
 
 class PieceType(Enum):
@@ -45,19 +46,6 @@ class Player(Enum):
     GOTE = PlayerId(1)  # Second player (starts at top)
 
 
-"""
-                move_data: MoveData = {
-                    "move_number": t + 1,
-                    "player": "Sente" if t % 2 == 0 else "Gote",
-                    "piece_id": model[move["piece_id"]].as_long(),
-                    "is_drop": is_true(model[move["is_drop"]]),
-                    "from_": (model[move["from_row"]].as_long(), model[move["from_col"]].as_long()),
-                    "to": (model[move["to_row"]].as_long(), model[move["to_col"]].as_long()),
-                    "captures": model[move["captures"]].as_long(),
-                }
-"""
-
-
 class Move(TypedDict):
     """Representation of a move in Dōbutsu Shōgi."""
 
@@ -70,40 +58,92 @@ class Move(TypedDict):
     captures: ArithRef  # -1 if no capture, else piece id being captured
 
 
-class MoveData(TypedDict):
+@dataclass(frozen=True, slots=True)
+class MoveData:
     """Data structure for a move in Dōbutsu Shōgi."""
 
-    move_number: MoveIndex  # Move number (1-indexed)
-    player: Literal["Sente", "Gote"]  # "Sente" or "Gote"
+    move_number: TimeIndex  # Move number (0-indexed)
+    player: Literal["Sente", "Gote"]
     piece_id: PieceId  # Piece ID (0-7)
     is_drop: bool  # True if this is a drop move
-    from_: tuple[int, int]  # (row, col) of the piece before the move
-    to: tuple[int, int]  # (row, col) of the piece after the move
+    from_: tuple[RowIndex, ColIndex]  # (row, col) of the piece before the move
+    to: tuple[RowIndex, ColIndex]  # (row, col) of the piece after the move
     captures: int  # -1 if no capture, else piece id being captured
-    piece_type: Literal["Lion", "Giraffe", "Elephant", "Chick", "Hen"]
+    piece_type: PieceType
 
 
+@dataclass
+class MoveVariables:
+    """Variables for a move in Dōbutsu Shōgi."""
+
+    piece_id: ArithRef  # Piece being moved (0-7)
+    from_row: ArithRef  # Starting row (0 for drop)
+    from_col: ArithRef  # Starting column (0 for drop)
+    to_row: ArithRef  # Target row (1-4)
+    to_col: ArithRef  # Target column (1-3)
+    is_drop: BoolRef  # True if this is a drop move
+    captures: ArithRef  # -1 if no capture, else piece id being captured
+
+
+initial_setup = [
+    # Sente (bottom player) - Row 1
+    (0, PieceType.ELEPHANT, Player.SENTE, 1, 1),  # Elephant at bottom-left
+    (1, PieceType.LION, Player.SENTE, 1, 2),  # Lion at bottom-center
+    (2, PieceType.GIRAFFE, Player.SENTE, 1, 3),  # Giraffe at bottom-right
+    (3, PieceType.CHICK, Player.SENTE, 2, 2),  # Chick in front of Lion
+    # Gote (top player) - Row 4
+    (4, PieceType.GIRAFFE, Player.GOTE, 4, 1),  # Giraffe at top-left
+    (5, PieceType.LION, Player.GOTE, 4, 2),  # Lion at top-center
+    (6, PieceType.ELEPHANT, Player.GOTE, 4, 3),  # Elephant at top-right
+    (7, PieceType.CHICK, Player.GOTE, 3, 2),  # Chick in front of Lion
+]
+
+
+@dataclass(frozen=True, slots=True)
+class PieceState:
+    """State of a piece in Dōbutsu Shōgi."""
+
+    piece_id: PieceId
+    piece_type: PieceType
+    piece_owner: PlayerId
+    row: RowIndex
+    col: ColIndex
+
+
+@dataclass
 class DobutsuShogiZ3:
     """Complete Z3 model for Dōbutsu Shōgi."""
 
-    def __init__(self, max_moves: int = 20) -> None:
-        """Initialize the model.
+    # Constants
+    ROWS: ClassVar[int] = 4  # Number of rows on the board
+    COLS: ClassVar[int] = 3  # Number of columns on the board
+    N_PIECES: ClassVar[int] = 8  # Total number of pieces (4 per player)
 
-        Args:
-            max_moves: Maximum number of half-moves to search
+    # Solver configuration
+    solver: Solver = field(default_factory=Solver, init=False)
+    max_moves: int = 20  # Maximum number of half-moves to search
 
-        """
-        # Board dimensions
-        self.ROWS = 4
-        self.COLS = 3
-        self.max_moves = max_moves
+    # Variables
+    piece_type: dict[PieceId, ArithRef] = field(default_factory=dict, init=False)
+    piece_owner: dict[tuple[TimeIndex, PieceId], ArithRef] = field(default_factory=dict, init=False)
+    piece_row: dict[TimeIndex, dict[PieceId, ArithRef]] = field(
+        default_factory=dict,
+        init=False,
+    )  # TODO: Change to (MoveIndex, PieceId) -> ArithRef # Row of piece at time t (1-indexed). 0 means piece is in hand.
+    piece_col: dict[TimeIndex, dict[PieceId, ArithRef]] = field(
+        default_factory=dict,
+        init=False,
+    )  # Column of piece at time t (1-indexed). 0 means piece is in hand.
+    piece_captured: dict[TimeIndex, dict[PieceId, BoolRef]] = field(default_factory=dict, init=False)
+    piece_promoted: dict[TimeIndex, dict[PieceId, BoolRef]] = field(default_factory=dict, init=False)
+    piece_in_hand_of: dict[TimeIndex, dict[PieceId, ArithRef]] = field(
+        default_factory=dict,
+        init=False,
+    )  # Which player holds this piece (-1 if on board)
+    moves: dict[TimeIndex, MoveVariables] = field(default_factory=dict, init=False)
 
-        # Piece counts
-        self.NUM_PIECES = 8  # 4 pieces per player
-
-        # Initialize solver
-        self.solver = Solver()
-
+    def __post_init__(self) -> None:
+        """Initialize the model."""
         # Create variables
         self._create_variables()
 
@@ -115,37 +155,25 @@ class DobutsuShogiZ3:
     def _create_variables(self) -> None:
         """Create all Z3 variables."""
         # Static piece properties (never change)
-        self.piece_type: dict[PieceId, ArithRef] = {}
-        self.piece_owner: dict[PieceId, ArithRef] = {}
-        for _p in range(self.NUM_PIECES):
+        for _p in range(self.N_PIECES):
             p = PieceId(_p)
             self.piece_type[p] = Int(f"piece_{p}_type")
-            self.piece_owner[p] = Int(f"piece_{p}_owner")
-            # Constraints on static properties
+
+            # Constraints
             self.solver.add(self.piece_type[p] >= PieceType.min_value())
             self.solver.add(self.piece_type[p] <= PieceType.max_value())
-            self.solver.add(Or(self.piece_owner[p] == 0, self.piece_owner[p] == 1))
-
-        # Dynamic piece state (changes over time)
-        self.piece_row: dict[MoveIndex, dict[PieceId, ArithRef]] = {}
-        self.piece_col: dict[MoveIndex, dict[PieceId, ArithRef]] = {}
-        self.piece_captured: dict[MoveIndex, dict[PieceId, BoolRef]] = {}
-        self.piece_promoted: dict[MoveIndex, dict[PieceId, BoolRef]] = {}
-        self.piece_in_hand_of: dict[
-            MoveIndex,
-            dict[PieceId, ArithRef],
-        ] = {}  # Which player holds this piece (-1 if on board)
 
         for _t in range(self.max_moves + 1):
-            t = MoveIndex(_t)
+            t = TimeIndex(_t)
             self.piece_row[t] = {}
             self.piece_col[t] = {}
             self.piece_captured[t] = {}
             self.piece_promoted[t] = {}
             self.piece_in_hand_of[t] = {}
 
-            for _p in range(self.NUM_PIECES):
+            for _p in range(self.N_PIECES):
                 p = PieceId(_p)
+                self.piece_owner[t, p] = Int(f"piece_{p}_owner_t{t}")
                 self.piece_row[t][p] = Int(f"piece_{p}_row_t{t}")
                 self.piece_col[t][p] = Int(f"piece_{p}_col_t{t}")
                 self.piece_captured[t][p] = Bool(f"piece_{p}_captured_t{t}")
@@ -153,6 +181,7 @@ class DobutsuShogiZ3:
                 self.piece_in_hand_of[t][p] = Int(f"piece_{p}_in_hand_t{t}")
 
                 # Constraints
+                self.solver.add(Or(self.piece_owner[t, p] == 0, self.piece_owner[t, p] == 1))
                 self.solver.add(self.piece_row[t][p] >= 1)
                 self.solver.add(self.piece_row[t][p] <= self.ROWS)
                 self.solver.add(self.piece_col[t][p] >= 1)
@@ -161,35 +190,30 @@ class DobutsuShogiZ3:
                 self.solver.add(self.piece_in_hand_of[t][p] <= 1)
 
         # Move representation
-        self.moves: list[Move] = []
         for _t in range(self.max_moves):
-            t = MoveIndex(_t)
-            self.moves.append(
-                {
-                    "piece_id": Int(f"move_{t}_piece"),
-                    "from_row": Int(f"move_{t}_from_row"),
-                    "from_col": Int(f"move_{t}_from_col"),
-                    "to_row": Int(f"move_{t}_to_row"),
-                    "to_col": Int(f"move_{t}_to_col"),
-                    "is_drop": Bool(f"move_{t}_is_drop"),
-                    "captures": Int(f"move_{t}_captures"),  # -1 if no capture, else piece id
-                },
+            t = TimeIndex(_t)
+            self.moves[t] = MoveVariables(
+                piece_id=Int(f"move_{t}_piece"),
+                from_row=Int(f"move_{t}_from_row"),
+                from_col=Int(f"move_{t}_from_col"),
+                to_row=Int(f"move_{t}_to_row"),
+                to_col=Int(f"move_{t}_to_col"),
+                is_drop=Bool(f"move_{t}_is_drop"),
+                captures=Int(f"move_{t}_captures"),
             )
 
             # Constraints on moves
-            move = self.moves[t]
-            self.solver.add(move["piece_id"] >= 0)
-            self.solver.add(move["piece_id"] < self.NUM_PIECES)
-            self.solver.add(move["from_row"] >= 0)  # 0 means drop
-            self.solver.add(move["from_row"] <= self.ROWS)
-            self.solver.add(move["from_col"] >= 0)
-            self.solver.add(move["from_col"] <= self.COLS)
-            self.solver.add(move["to_row"] >= 1)
-            self.solver.add(move["to_row"] <= self.ROWS)
-            self.solver.add(move["to_col"] >= 1)
-            self.solver.add(move["to_col"] <= self.COLS)
-            self.solver.add(move["captures"] >= -1)
-            self.solver.add(move["captures"] < self.NUM_PIECES)
+            self.solver.add(self.moves[t].piece_id < self.N_PIECES)
+            self.solver.add(self.moves[t].from_row >= 0)  # 0 means drop
+            self.solver.add(self.moves[t].from_row <= self.ROWS)
+            self.solver.add(self.moves[t].from_col >= 0)
+            self.solver.add(self.moves[t].from_col <= self.COLS)
+            self.solver.add(self.moves[t].to_row >= 1)
+            self.solver.add(self.moves[t].to_row <= self.ROWS)
+            self.solver.add(self.moves[t].to_col >= 1)
+            self.solver.add(self.moves[t].to_col <= self.COLS)
+            self.solver.add(self.moves[t].captures >= -1)
+            self.solver.add(self.moves[t].captures < self.N_PIECES)
 
     def _add_initial_position(self) -> None:
         """Set up the initial board position."""
@@ -218,24 +242,24 @@ class DobutsuShogiZ3:
 
             # Static properties
             self.solver.add(self.piece_type[piece_id] == ptype.value)
-            self.solver.add(self.piece_owner[piece_id] == owner.value)
 
-            # Initial position
-            initial_move_index = MoveIndex(0)
-            self.solver.add(self.piece_row[initial_move_index][piece_id] == row)
-            self.solver.add(self.piece_col[initial_move_index][piece_id] == col)
-            self.solver.add(Not(self.piece_captured[initial_move_index][piece_id]))
-            self.solver.add(Not(self.piece_promoted[initial_move_index][piece_id]))
-            self.solver.add(self.piece_in_hand_of[initial_move_index][piece_id] == -1)  # On board
+            # Initial state
+            initial_time_index = TimeIndex(0)
+            self.solver.add(self.piece_owner[initial_time_index, piece_id] == owner.value)
+            self.solver.add(self.piece_row[initial_time_index][piece_id] == row)
+            self.solver.add(self.piece_col[initial_time_index][piece_id] == col)
+            self.solver.add(Not(self.piece_captured[initial_time_index][piece_id]))
+            self.solver.add(Not(self.piece_promoted[initial_time_index][piece_id]))
+            self.solver.add(self.piece_in_hand_of[initial_time_index][piece_id] == -1)  # On board
 
     def _add_basic_constraints(self) -> None:
         """Add basic game constraints."""
         for _t in range(self.max_moves + 1):
-            t = MoveIndex(_t)
+            t = TimeIndex(_t)
             # No two pieces on same square (unless one is captured)
-            for _p1 in range(self.NUM_PIECES):
+            for _p1 in range(self.N_PIECES):
                 p1 = PieceId(_p1)
-                for _p2 in range(p1 + 1, self.NUM_PIECES):
+                for _p2 in range(p1 + 1, self.N_PIECES):
                     p2 = PieceId(_p2)
                     self.solver.add(
                         Implies(
@@ -248,14 +272,14 @@ class DobutsuShogiZ3:
                     )
 
             # Captured pieces are in someone's hand
-            for _p in range(self.NUM_PIECES):
+            for _p in range(self.N_PIECES):
                 p = PieceId(_p)
                 self.solver.add(
                     self.piece_captured[t][p] == (self.piece_in_hand_of[t][p] >= 0),
                 )
 
             # Only Chicks can be promoted (to Hen)
-            for _p in range(self.NUM_PIECES):
+            for _p in range(self.N_PIECES):
                 p = PieceId(_p)
                 self.solver.add(
                     Implies(
@@ -264,10 +288,10 @@ class DobutsuShogiZ3:
                     ),
                 )
 
-    def _square_empty_or_opponent(self, t: MoveIndex, row: int, col: int, current_player: PlayerId) -> BoolRef:
+    def _square_empty_or_opponent(self, t: TimeIndex, row: int, col: int, current_player: PlayerId) -> BoolRef:
         """Check if a square is empty or contains an opponent's piece."""
         square_conditions = []
-        for _p in range(self.NUM_PIECES):
+        for _p in range(self.N_PIECES):
             p = PieceId(_p)
             # Square is occupied by piece p
             occupied_by_p = And(
@@ -277,58 +301,58 @@ class DobutsuShogiZ3:
             )
             # If occupied, must be opponent's piece
             square_conditions.append(
-                Implies(occupied_by_p, self.piece_owner[p] != current_player),
+                Implies(occupied_by_p, self.piece_owner[t, p] != current_player),
             )
         return And(square_conditions)
 
     def _add_movement_constraints(self) -> None:
         """Add constraints for piece movements."""
         for _t in range(self.max_moves):
-            t = MoveIndex(_t)
+            t = TimeIndex(_t)
             move = self.moves[t]
             current_player = PlayerId(t % 2)  # 0 for Sente, 1 for Gote
 
             # The moving piece must belong to current player
-            # Note: move['piece_id'] is a Z3 Int variable, not a value
+            # Note: move.piece_id is a Z3 Int variable, not a value
             # We need to constrain it for all possible pieces
             piece_owner_constraints = []
-            for _p in range(self.NUM_PIECES):
+            for _p in range(self.N_PIECES):
                 p = PieceId(_p)
                 piece_owner_constraints.append(
                     Implies(
-                        move["piece_id"] == p,
-                        self.piece_owner[p] == current_player,
+                        move.piece_id == p,
+                        self.piece_owner[t, p] == current_player,
                     ),
                 )
             self.solver.add(And(piece_owner_constraints))
 
             # Handle regular moves vs drops
-            # Since move['piece_id'] is a Z3 variable, we need to handle all cases
-            for _p in range(self.NUM_PIECES):
+            # Since move.piece_id is a Z3 variable, we need to handle all cases
+            for _p in range(self.N_PIECES):
                 p = PieceId(_p)
                 self.solver.add(
                     Implies(
-                        move["piece_id"] == p,
+                        move.piece_id == p,
                         If(
-                            move["is_drop"],
+                            move.is_drop,
                             # Drop constraints
                             And(
                                 self.piece_captured[t][p],
                                 self.piece_in_hand_of[t][p] == current_player,
-                                move["from_row"] == 0,
-                                move["from_col"] == 0,
-                                move["captures"] == -1,
+                                move.from_row == 0,
+                                move.from_col == 0,
+                                move.captures == -1,
                                 # Can't drop on occupied square
-                                self._square_empty_or_opponent(t, move["to_row"], move["to_col"], current_player),
+                                self._square_empty_or_opponent(t, move.to_row, move.to_col, current_player),
                             ),
                             # Regular move constraints
                             And(
                                 Not(self.piece_captured[t][p]),
-                                move["from_row"] == self.piece_row[t][p],
-                                move["from_col"] == self.piece_col[t][p],
+                                move.from_row == self.piece_row[t][p],
+                                move.from_col == self.piece_col[t][p],
                                 self._valid_move_pattern(t, move, p),
                                 # Can't move to square with own piece
-                                self._square_empty_or_opponent(t, move["to_row"], move["to_col"], current_player),
+                                self._square_empty_or_opponent(t, move.to_row, move.to_col, current_player),
                             ),
                         ),
                     ),
@@ -337,7 +361,7 @@ class DobutsuShogiZ3:
             # Apply move effects
             self._apply_move_effects(t)
 
-    def _valid_move_pattern(self, t: MoveIndex, move: Move, piece_id: PieceId) -> BoolRef:
+    def _valid_move_pattern(self, t: TimeIndex, move: MoveVariables, piece_id: PieceId) -> BoolRef:
         """Check if move follows piece movement rules.
 
         Args:
@@ -346,10 +370,10 @@ class DobutsuShogiZ3:
             piece_id: The actual piece ID (integer)
 
         """
-        from_row = move["from_row"]
-        from_col = move["from_col"]
-        to_row = move["to_row"]
-        to_col = move["to_col"]
+        from_row = move.from_row
+        from_col = move.from_col
+        to_row = move.to_row
+        to_col = move.to_col
 
         # Calculate movement delta
         d_row = to_row - from_row
@@ -389,7 +413,7 @@ class DobutsuShogiZ3:
 
         # Chick - moves 1 square forward (direction depends on owner)
         chick_forward = If(
-            self.piece_owner[piece_id] == Player.SENTE.value,
+            self.piece_owner[t, piece_id] == Player.SENTE.value,
             d_row == 1,  # Sente moves up (from row 1 toward row 4)
             d_row == -1,  # Gote moves down (from row 4 toward row 1)
         )
@@ -403,7 +427,7 @@ class DobutsuShogiZ3:
             And(d_col == 0, Or(d_row == 1, d_row == -1)),
             # Forward diagonal moves
             And(
-                If(self.piece_owner[piece_id] == Player.SENTE.value, d_row == 1, d_row == -1),
+                If(self.piece_owner[t, piece_id] == Player.SENTE.value, d_row == 1, d_row == -1),
                 Or(d_col == 1, d_col == -1),
             ),
         )
@@ -412,12 +436,12 @@ class DobutsuShogiZ3:
         # Combine all patterns - ALL must be satisfied
         return And(valid_patterns)
 
-    def _apply_move_effects(self, t: MoveIndex) -> None:
+    def _apply_move_effects(self, t: TimeIndex) -> None:
         """Apply the effects of a move to get next board state."""
         move = self.moves[t]
-        next_t = MoveIndex(t + 1)
+        next_t = TimeIndex(t + 1)
 
-        for _p in range(self.NUM_PIECES):
+        for _p in range(self.N_PIECES):
             p = PieceId(_p)
             # Default: pieces stay in same state
             same_position = And(
@@ -429,12 +453,12 @@ class DobutsuShogiZ3:
             same_hand = self.piece_in_hand_of[next_t][p] == self.piece_in_hand_of[t][p]
 
             # Moving piece
-            is_moving = move["piece_id"] == p
+            is_moving = move.piece_id == p
 
             # Captured piece
             is_captured = And(
-                move["captures"] == p,
-                Not(move["is_drop"]),
+                move.captures == p,
+                Not(move.is_drop),
             )
 
             # Apply effects based on role in move
@@ -443,8 +467,8 @@ class DobutsuShogiZ3:
                     is_moving,
                     # This piece is moving
                     And(
-                        self.piece_row[next_t][p] == move["to_row"],
-                        self.piece_col[next_t][p] == move["to_col"],
+                        self.piece_row[next_t][p] == move.to_row,
+                        self.piece_col[next_t][p] == move.to_col,
                         self.piece_captured[next_t][p] == False,
                         self.piece_in_hand_of[next_t][p] == -1,
                         # Check promotion (Chick reaching last rank)
@@ -452,8 +476,8 @@ class DobutsuShogiZ3:
                             And(
                                 self.piece_type[p] == PieceType.CHICK.value,
                                 Or(
-                                    And(self.piece_owner[p] == Player.SENTE.value, move["to_row"] == self.ROWS),
-                                    And(self.piece_owner[p] == Player.GOTE.value, move["to_row"] == 1),
+                                    And(self.piece_owner[t, p] == Player.SENTE.value, move.to_row == self.ROWS),
+                                    And(self.piece_owner[t, p] == Player.GOTE.value, move.to_row == 1),
                                 ),
                             ),
                             self.piece_promoted[next_t][p] == True,
@@ -478,18 +502,18 @@ class DobutsuShogiZ3:
         # Determine what piece (if any) is at destination
         # IMPORTANT: Can only capture OPPONENT's pieces!
         current_player = t % 2
-        for _p in range(self.NUM_PIECES):
+        for _p in range(self.N_PIECES):
             p = PieceId(_p)
             self.solver.add(
                 Implies(
                     And(
                         Not(self.piece_captured[t][p]),
-                        p != move["piece_id"],
-                        self.piece_row[t][p] == move["to_row"],
-                        self.piece_col[t][p] == move["to_col"],
-                        self.piece_owner[p] != current_player,
+                        p != move.piece_id,
+                        self.piece_row[t][p] == move.to_row,
+                        self.piece_col[t][p] == move.to_col,
+                        self.piece_owner[t, p] != current_player,
                     ),  # Must be opponent's piece!
-                    move["captures"] == p,
+                    move.captures == p,
                 ),
             )
 
@@ -498,17 +522,17 @@ class DobutsuShogiZ3:
             *[
                 Or(
                     self.piece_captured[t][PieceId(p)],
-                    p == move["piece_id"],
-                    self.piece_row[t][PieceId(p)] != move["to_row"],
-                    self.piece_col[t][PieceId(p)] != move["to_col"],
-                    self.piece_owner[PieceId(p)] == current_player,
+                    p == move.piece_id,
+                    self.piece_row[t][PieceId(p)] != move.to_row,
+                    self.piece_col[t][PieceId(p)] != move.to_col,
+                    self.piece_owner[t, PieceId(p)] == current_player,
                 )  # Can't capture own pieces
-                for p in range(self.NUM_PIECES)
+                for p in range(self.N_PIECES)
             ],
         )
-        self.solver.add(Implies(no_valid_capture, move["captures"] == -1))
+        self.solver.add(Implies(no_valid_capture, move.captures == -1))
 
-    def add_victory_condition(self, t: MoveIndex) -> BoolRef:
+    def add_victory_condition(self, t: TimeIndex) -> BoolRef:
         """Check victory conditions at time t.
 
         1. Opponent's Lion is captured
@@ -518,12 +542,12 @@ class DobutsuShogiZ3:
 
         victory_conditions = []
 
-        for _p in range(self.NUM_PIECES):
+        for _p in range(self.N_PIECES):
             p = PieceId(_p)
             # Victory by capturing opponent's Lion
             is_opponent_lion = And(
                 self.piece_type[p] == PieceType.LION.value,
-                self.piece_owner[p] != current_player,
+                self.piece_owner[t, p] != current_player,
             )
             victory_conditions.append(
                 And(is_opponent_lion, self.piece_captured[t][p]),
@@ -532,7 +556,7 @@ class DobutsuShogiZ3:
             # Victory by reaching opponent's back rank
             is_own_lion = And(
                 self.piece_type[p] == PieceType.LION.value,
-                self.piece_owner[p] == current_player,
+                self.piece_owner[t, p] == current_player,
             )
             reaches_back_rank = If(
                 current_player == Player.SENTE.value,
@@ -550,7 +574,7 @@ class DobutsuShogiZ3:
 
         return Or(victory_conditions)
 
-    def solve_mate_in_n(self, n: MoveIndex, winning_player: Player = Player.SENTE) -> list[MoveData] | None:
+    def solve_mate_in_n(self, n: TimeIndex, winning_player: Player = Player.SENTE) -> list[MoveData] | None:
         """Try to find a mate in exactly n moves for the specified player.
 
         Args:
@@ -580,7 +604,7 @@ class DobutsuShogiZ3:
 
         # No victory before move n
         for _t in range(n):
-            t = MoveIndex(_t)
+            t = TimeIndex(_t)
             s.add(Not(self.add_victory_condition(t)))
 
         if s.check() == sat:
@@ -588,7 +612,7 @@ class DobutsuShogiZ3:
 
             # Debug: Print initial board state
             print("\nInitial board state:")
-            self.print_board_state(model, MoveIndex(0))
+            self.print_board_state(model, TimeIndex(0))
 
             # Debug: Print final board state
             print(f"\nBoard state after move {n}:")
@@ -597,10 +621,10 @@ class DobutsuShogiZ3:
             moves: list[MoveData] = []
 
             for _t in range(n):
-                t = MoveIndex(_t)
+                t = TimeIndex(_t)
                 move = self.moves[t]
 
-                piece_id = PieceId(model[move["piece_id"]].as_long())
+                piece_id = PieceId(model[move.piece_id].as_long())
                 piece_type_val: int = model[self.piece_type[piece_id]].as_long()
                 piece_types: list[Literal["Lion", "Giraffe", "Elephant", "Chick", "Hen"]] = [
                     "Lion",
@@ -611,21 +635,21 @@ class DobutsuShogiZ3:
                 ]
 
                 move_data: MoveData = {
-                    "move_number": MoveIndex(t + 1),
+                    "move_number": TimeIndex(t),
                     "player": "Sente" if t % 2 == 0 else "Gote",
                     "piece_id": piece_id,
-                    "is_drop": is_true(model[move["is_drop"]]),
-                    "from_": (model[move["from_row"]].as_long(), model[move["from_col"]].as_long()),
-                    "to": (model[move["to_row"]].as_long(), model[move["to_col"]].as_long()),
-                    "captures": model[move["captures"]].as_long(),
+                    "is_drop": is_true(model[move.is_drop]),
+                    "from_": (model[move.from_row].as_long(), model[move.from_col].as_long()),
+                    "to": (model[move.to_row].as_long(), model[move.to_col].as_long()),
+                    "captures": model[move.captures].as_long(),
                     "piece_type": piece_types[piece_type_val],
                 }
 
                 # Debug: Print piece owner
                 owner = model[self.piece_owner[piece_id]].as_long()
                 print(f"\nDebug Move {t + 1}: Piece {piece_id} (type={piece_type_val}, owner={owner})")
-                print(f"  From: ({model[move['from_row']].as_long()}, {model[move['from_col']].as_long()})")
-                print(f"  To: ({model[move['to_row']].as_long()}, {model[move['to_col']].as_long()})")
+                print(f"  From: ({model[move.from_row].as_long()}, {model[move.from_col].as_long()})")
+                print(f"  To: ({model[move.to_row].as_long()}, {model[move.to_col].as_long()})")
                 if move_data["captures"] >= 0:
                     cap_type = model[self.piece_type[move_data["captures"]]].as_long()
                     cap_owner = model[self.piece_owner[move_data["captures"]]].as_long()
@@ -635,28 +659,28 @@ class DobutsuShogiZ3:
 
             # Check victory condition
             print("\nVictory condition check:")
-            for _p in range(self.NUM_PIECES):
+            for _p in range(self.N_PIECES):
                 p = PieceId(_p)
                 if model[self.piece_type[p]].as_long() == PieceType.LION.value:
                     captured = is_true(model[self.piece_captured[n][p]])
                     row = model[self.piece_row[n][p]].as_long()
-                    owner = model[self.piece_owner[p]].as_long()
+                    owner = model[self.piece_owner[n, p]].as_long()
                     print(f"  Lion {p} (owner={owner}): captured={captured}, row={row}")
 
             return moves
 
         return None
 
-    def _victory_condition_for_player(self, t: MoveIndex, winning_player: PlayerId) -> BoolRef:
+    def _victory_condition_for_player(self, t: TimeIndex, winning_player: PlayerId) -> BoolRef:
         """Check if the specified player has won at time t."""
         victory_conditions = []
 
-        for _p in range(self.NUM_PIECES):
+        for _p in range(self.N_PIECES):
             p = PieceId(_p)
             # Victory by capturing opponent's Lion
             is_opponent_lion = And(
                 self.piece_type[p] == PieceType.LION.value,
-                self.piece_owner[p] != winning_player,  # Opponent's Lion
+                self.piece_owner[t, p] != winning_player,  # Opponent's Lion
             )
             victory_conditions.append(
                 And(is_opponent_lion, self.piece_captured[t][p]),
@@ -665,7 +689,7 @@ class DobutsuShogiZ3:
             # Victory by reaching opponent's back rank
             is_own_lion = And(
                 self.piece_type[p] == PieceType.LION.value,
-                self.piece_owner[p] == winning_player,  # Own Lion
+                self.piece_owner[t, p] == winning_player,  # Own Lion
             )
             reaches_back_rank = If(
                 winning_player == Player.SENTE.value,
@@ -680,7 +704,7 @@ class DobutsuShogiZ3:
 
         return Or(victory_conditions)
 
-    def print_board_state(self, model: dict, t: MoveIndex) -> None:
+    def print_board_state(self, model: dict, t: TimeIndex) -> None:
         """Print the board state at time t given a model."""
         print(f"\n=== Board at time {t} ===")
         board = [[" . " for _ in range(self.COLS)] for _ in range(self.ROWS)]
@@ -698,13 +722,13 @@ class DobutsuShogiZ3:
             (PieceType.CHICK.value, Player.GOTE.value, True): " h ",  # hen
         }
 
-        for _p in range(self.NUM_PIECES):
+        for _p in range(self.N_PIECES):
             p = PieceId(_p)
             if not is_true(model[self.piece_captured[t][p]]):
                 row = model[self.piece_row[t][p]].as_long() - 1
                 col = model[self.piece_col[t][p]].as_long() - 1
                 ptype = model[self.piece_type[p]].as_long()
-                owner = model[self.piece_owner[p]].as_long()
+                owner = model[self.piece_owner[t, p]].as_long()
                 promoted = is_true(model[self.piece_promoted[t][p]])
 
                 board[row][col] = pieces_symbols.get((ptype, owner, promoted), " ? ")
@@ -716,7 +740,7 @@ class DobutsuShogiZ3:
         # Print captured pieces
         sente_hand = []
         gote_hand = []
-        for _p in range(self.NUM_PIECES):
+        for _p in range(self.N_PIECES):
             p = PieceId(_p)
             if is_true(model[self.piece_captured[t][p]]):
                 holder = model[self.piece_in_hand_of[t][p]].as_long()
@@ -746,18 +770,18 @@ def example_mate_problem() -> None:
     test_solver.add(solver.solver.assertions())
 
     # Force a specific move to see if it's valid
-    move = solver.moves[0]
-    test_solver.add(move["piece_id"] == 3)  # Sente's Chick
-    test_solver.add(move["from_row"] == 2)
-    test_solver.add(move["from_col"] == 2)
-    test_solver.add(Not(move["is_drop"]))
+    move = solver.moves[TimeIndex(0)]
+    test_solver.add(move.piece_id == 3)  # Sente's Chick
+    test_solver.add(move.from_row == 2)
+    test_solver.add(move.from_col == 2)
+    test_solver.add(Not(move.is_drop))
 
     # Try different destinations
     for to_row, to_col in [(1, 2), (2, 1), (2, 3), (3, 2)]:
         s = Solver()
         s.add(test_solver.assertions())
-        s.add(move["to_row"] == to_row)
-        s.add(move["to_col"] == to_col)
+        s.add(move.to_row == to_row)
+        s.add(move.to_col == to_col)
 
         if s.check() == sat:
             print(f"  Can move to ({to_row}, {to_col}): YES")
@@ -769,20 +793,20 @@ def example_mate_problem() -> None:
     # Try to find mate for SENTE (first player)
     print("Looking for mates where SENTE wins...")
     for _n in [1, 3, 5, 7]:
-        n = MoveIndex(_n)
+        n = TimeIndex(_n)
         print(f"\nSearching for SENTE mate in {n} moves...")
         solution = solver.solve_mate_in_n(n, Player.SENTE)
 
         if solution:
             print(f"Found SENTE mate in {n} moves!")
             for move in solution:
-                if move["is_drop"]:
-                    print(f"Move {move['move_number']} ({move['player']}): Drop {move['piece_type']} at {move['to']}")
+                if move.is_drop:
+                    print(f"Move {move.move_number} ({move.player}): Drop {move.piece_type} at {move.to}")
                 else:
                     print(
-                        f"Move {move['move_number']} ({move['player']}): "
-                        f"{move['piece_type']} from {move['from']} to {move['to']}"
-                        f"{' (capture)' if move['captures'] >= 0 else ''}",
+                        f"Move {move.move_number} ({move.player}): "
+                        f"{move.piece_type} from {move.from_} to {move.to}"
+                        f"{' (capture)' if move.captures >= 0 else ''}",
                     )
             break
     else:
