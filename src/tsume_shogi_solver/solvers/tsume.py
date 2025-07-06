@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from z3 import And, sat
 
-from tsume_shogi_solver.types import TsumeProblem, TsumeSolution
+from tsume_shogi_solver.problems import TsumeProblem, TsumeSolution
 
 from .base import BaseSolver
 

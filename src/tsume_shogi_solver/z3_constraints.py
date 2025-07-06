@@ -7,14 +7,15 @@ from typing import TYPE_CHECKING
 
 from z3 import Abs, And, BoolRef, If, Implies, Not, Or
 
-from .types import MoveVariables, PieceId, PieceType, Player, TimeIndex
+from .core import PieceId, PieceType, Player, TimeIndex
+from .z3_models import MoveVariables
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
     from z3.z3 import ArithRef
 
-    from .game_state import GameState
+    from .z3_models import GameState
 
 
 class GameRules:

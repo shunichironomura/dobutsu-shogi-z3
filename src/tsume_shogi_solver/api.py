@@ -2,21 +2,17 @@
 
 from __future__ import annotations
 
-from .solvers import CheckmateSolver, ReachabilitySolver, TsumeSolver
-from .types import (
-    DEFAULT_INITIAL_SETUP,
+from .constants import DEFAULT_INITIAL_SETUP
+from .core import PieceId, PieceState, PieceType, Player, Position
+from .problems import (
     CheckmateProblem,
     CheckmateSolution,
-    PieceId,
-    PieceState,
-    PieceType,
-    Player,
-    Position,
     ReachabilityProblem,
     ReachabilitySolution,
     TsumeProblem,
     TsumeSolution,
 )
+from .solvers import CheckmateSolver, ReachabilitySolver, TsumeSolver
 
 __all__ = [
     "DEFAULT_INITIAL_SETUP",

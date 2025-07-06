@@ -1,4 +1,4 @@
-"""Lightweight GameState class for Z3 variable management."""
+"""Z3-specific models and variable management for Dōbutsu Shōgi solver."""
 
 from __future__ import annotations
 
@@ -7,10 +7,23 @@ from typing import TYPE_CHECKING
 
 from z3 import Bool, Int
 
-from .types import MoveVariables, PieceId, PieceState, PieceType, TimeIndex
+from .core import PieceId, PieceState, PieceType, TimeIndex
 
 if TYPE_CHECKING:
     from z3.z3 import ArithRef, BoolRef
+
+
+@dataclass
+class MoveVariables:
+    """Z3 variables for a move in Dōbutsu Shōgi."""
+
+    piece_id: ArithRef
+    from_row: ArithRef
+    from_col: ArithRef
+    to_row: ArithRef
+    to_col: ArithRef
+    is_drop: BoolRef
+    captures: ArithRef
 
 
 @dataclass

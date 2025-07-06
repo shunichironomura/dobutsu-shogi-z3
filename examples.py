@@ -17,7 +17,7 @@ from tsume_shogi_solver import (
     find_shortest_mate,
     find_shortest_path,
 )
-from tsume_shogi_solver.types import ColIndex, RowIndex
+from tsume_shogi_solver.core import ColIndex, RowIndex
 
 
 def example_checkmate_solving() -> None:

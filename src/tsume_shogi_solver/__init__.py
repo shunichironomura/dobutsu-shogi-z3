@@ -1,6 +1,6 @@
 """Dōbutsu Shōgi (Animal Chess) solver using Z3 SMT solver."""
 
-from .dobutsu_shogi import (
+from .api import (
     DEFAULT_INITIAL_SETUP,
     CheckmateProblem,
     CheckmateSolution,
