@@ -2,17 +2,19 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from itertools import product
 from typing import TYPE_CHECKING
 
-from z3 import Abs, And, Bool, BoolRef, If, Implies, Not, Or
+from z3 import Abs, And, BoolRef, If, Implies, Not, Or
 
-from .game_state import GameState
-from .types import PieceId, PieceType, Player, TimeIndex
+from .types import MoveVariables, PieceId, PieceType, Player, TimeIndex
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from z3.z3 import ArithRef
+
+    from .game_state import GameState
 
 
 class GameRules:
@@ -41,7 +43,6 @@ class GameRules:
 
         for _t in range(state.max_moves):
             t = TimeIndex(_t)
-            move = state.moves[t]
             current_player = _t % 2  # 0 for Sente, 1 for Gote
 
             # Moving piece must belong to current player
@@ -117,7 +118,7 @@ class GameRules:
 
     @staticmethod
     def _capture_hand_constraints(state: GameState) -> list[BoolRef]:
-        """Captured pieces are in someone's hand."""
+        """Generate constraints for captured pieces in hand."""
         constraints = []
 
         for t, p in product(range(state.max_moves + 1), range(state.N_PIECES)):
@@ -148,7 +149,7 @@ class GameRules:
 
     @staticmethod
     def _player_ownership_constraints(state: GameState, t: TimeIndex, current_player: int) -> list[BoolRef]:
-        """Moving piece must belong to current player."""
+        """Generate constraints for player piece ownership."""
         constraints = []
         move = state.moves[t]
 
@@ -201,7 +202,11 @@ class GameRules:
 
     @staticmethod
     def _square_empty_or_opponent(
-        state: GameState, t: TimeIndex, row: ArithRef, col: ArithRef, current_player: int
+        state: GameState,
+        t: TimeIndex,
+        row: ArithRef,
+        col: ArithRef,
+        current_player: int,
     ) -> BoolRef:
         """Check if square is empty or contains opponent's piece."""
         square_conditions = []
@@ -220,7 +225,7 @@ class GameRules:
         return And(square_conditions)
 
     @staticmethod
-    def _valid_move_pattern(state: GameState, t: TimeIndex, move, piece_id: PieceId) -> BoolRef:
+    def _valid_move_pattern(state: GameState, t: TimeIndex, move: MoveVariables, piece_id: PieceId) -> BoolRef:
         """Check if move follows piece movement rules."""
         from_row = move.from_row
         from_col = move.from_col
@@ -402,7 +407,7 @@ class GameRules:
                     state.piece_owner[t, PieceId(p)] == current_player,
                 )
                 for p in range(state.N_PIECES)
-            ]
+            ],
         )
         constraints.append(Implies(no_valid_capture, move.captures == -1))
 

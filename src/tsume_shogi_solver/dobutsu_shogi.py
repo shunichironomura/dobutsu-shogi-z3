@@ -19,26 +19,21 @@ from .types import (
 )
 
 __all__ = [
-    # Problem types
+    "DEFAULT_INITIAL_SETUP",
     "CheckmateProblem",
     "CheckmateSolution",
     "CheckmateSolver",
-    # Core types
-    "DEFAULT_INITIAL_SETUP",
     "PieceId",
     "PieceState",
     "PieceType",
     "Player",
     "Position",
-    # Reachability
     "ReachabilityProblem",
     "ReachabilitySolution",
     "ReachabilitySolver",
-    # Tsume
     "TsumeProblem",
     "TsumeSolution",
     "TsumeSolver",
-    # Convenience functions
     "can_reach",
     "find_checkmate",
     "find_shortest_mate",

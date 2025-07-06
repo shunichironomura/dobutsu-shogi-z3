@@ -114,7 +114,7 @@ class TsumeProblem:
 
 
 # Union type for all problems
-Problem = Union[CheckmateProblem, ReachabilityProblem, TsumeProblem]
+Problem = CheckmateProblem | ReachabilityProblem | TsumeProblem
 
 
 # Solution Types

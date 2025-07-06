@@ -2,10 +2,16 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from z3 import And, sat
 
-from ..types import TsumeProblem, TsumeSolution
+from tsume_shogi_solver.types import TsumeProblem, TsumeSolution
+
 from .base import BaseSolver
+
+if TYPE_CHECKING:
+    from z3.z3 import BoolRef
 
 
 class TsumeSolver(BaseSolver):
@@ -33,7 +39,7 @@ class TsumeSolver(BaseSolver):
 
         return None
 
-    def solve_with_objective(self, problem: TsumeProblem, objective_constraint) -> TsumeSolution | None:
+    def solve_with_objective(self, problem: TsumeProblem, objective_constraint: BoolRef) -> TsumeSolution | None:
         """Solve with additional objective constraint."""
         if problem.max_moves <= 0:
             return None
@@ -53,7 +59,7 @@ class TsumeSolver(BaseSolver):
 
             return TsumeSolution(
                 moves=moves,
-                satisfied_constraints=problem.constraints + [objective_constraint],
+                satisfied_constraints=[*problem.constraints, objective_constraint],
             )
 
         return None

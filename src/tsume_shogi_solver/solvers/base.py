@@ -7,12 +7,14 @@ from typing import TYPE_CHECKING
 
 from z3 import Solver, is_true
 
-from ..game_rules import GameRules
-from ..game_state import GameState
-from ..types import MoveData, PieceId, PieceType, TimeIndex
+from tsume_shogi_solver.game_rules import GameRules
+from tsume_shogi_solver.game_state import GameState
+from tsume_shogi_solver.types import MoveData, PieceId, PieceState, PieceType, TimeIndex
 
 if TYPE_CHECKING:
-    from ..types import Problem, Solution
+    from z3.z3 import ModelRef
+
+    from tsume_shogi_solver.types import Problem, Solution
 
 
 class BaseSolver(ABC):
@@ -22,7 +24,7 @@ class BaseSolver(ABC):
     def solve(self, problem: Problem) -> Solution | None:
         """Solve the given problem."""
 
-    def _create_base_solver(self, max_moves: int, initial_state) -> tuple[Solver, GameState]:
+    def _create_base_solver(self, max_moves: int, initial_state: list[PieceState]) -> tuple[Solver, GameState]:
         """Create a solver with basic constraints."""
         state = GameState.create(max_moves)
         solver = Solver()
@@ -35,7 +37,7 @@ class BaseSolver(ABC):
 
         return solver, state
 
-    def _extract_moves(self, model, state: GameState, n_moves: int) -> list[MoveData]:
+    def _extract_moves(self, model: ModelRef, state: GameState, n_moves: int) -> list[MoveData]:
         """Extract move sequence from Z3 model."""
         moves = []
 

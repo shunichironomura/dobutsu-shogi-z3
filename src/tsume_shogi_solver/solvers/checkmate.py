@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from z3 import Not, sat
 
-from ..game_rules import GameRules
-from ..types import CheckmateProblem, CheckmateSolution, Player, TimeIndex
+from tsume_shogi_solver.game_rules import GameRules
+from tsume_shogi_solver.types import CheckmateProblem, CheckmateSolution, Player, TimeIndex
+
 from .base import BaseSolver
 
 
