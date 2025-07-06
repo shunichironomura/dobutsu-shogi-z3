@@ -20,8 +20,8 @@ from tsume_shogi_solver import (
 from tsume_shogi_solver.types import ColIndex, RowIndex
 
 
-def example_checkmate_solving():
-    """Example 1: Find checkmate using the new solver."""
+def example_checkmate_solving() -> None:
+    """Find checkmate using the new solver."""
     print("=== Example 1: Checkmate Solving ===")
 
     # Method 1: Using convenience function
@@ -57,13 +57,13 @@ def example_checkmate_solving():
         print("No mate found within search limit")
 
 
-def example_reachability_analysis():
-    """Example 2: Prove piece reachability."""
+def example_reachability_analysis() -> None:
+    """Prove piece reachability."""
     print("\n=== Example 2: Reachability Analysis ===")
 
     # Can Sente's chick reach the back rank?
     chick_id = PieceId(3)  # Sente's chick
-    target_position = (4, 2)  # Back rank, center
+    target_position = (RowIndex(4), ColIndex(2))  # Back rank, center
 
     print(f"\nCan Sente's chick (piece {chick_id}) reach position {target_position}?")
 
@@ -87,8 +87,8 @@ def example_reachability_analysis():
         print("No path found")
 
 
-def example_custom_position():
-    """Example 3: Custom position analysis."""
+def example_custom_position() -> None:
+    """Analyze custom position."""
     print("\n=== Example 3: Custom Position Analysis ===")
 
     # Create a custom position where Sente has a quick mate
@@ -118,8 +118,8 @@ def example_custom_position():
         print("\nNo mate found in 3 moves")
 
 
-def example_tsume_solver():
-    """Example 4: General Tsume solver."""
+def example_tsume_solver() -> None:
+    """Demonstrate general Tsume solver."""
     print("\n=== Example 4: General Tsume Solver ===")
 
     # Create a custom problem with specific constraints
@@ -144,8 +144,8 @@ def example_tsume_solver():
         print("No solution found")
 
 
-def example_solver_comparison():
-    """Example 5: Compare different solver approaches."""
+def example_solver_comparison() -> None:
+    """Compare different solver approaches."""
     print("\n=== Example 5: Solver Comparison ===")
 
     # Test the same position with different solvers
@@ -164,7 +164,7 @@ def example_solver_comparison():
         reachability_problem = ReachabilityProblem(
             DEFAULT_INITIAL_SETUP,
             piece_id,
-            (4, 2),
+            (RowIndex(4), ColIndex(2)),
             Player.SENTE,
             5,
         )
