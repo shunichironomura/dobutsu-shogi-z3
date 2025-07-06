@@ -1,5 +1,7 @@
 """General Tsume solver implementation."""
 
+from __future__ import annotations
+
 from z3 import And, sat
 
 from ..types import TsumeProblem, TsumeSolution

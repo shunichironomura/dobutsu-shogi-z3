@@ -200,7 +200,9 @@ class GameRules:
         return constraints
 
     @staticmethod
-    def _square_empty_or_opponent(state: GameState, t: TimeIndex, row: ArithRef, col: ArithRef, current_player: int) -> BoolRef:
+    def _square_empty_or_opponent(
+        state: GameState, t: TimeIndex, row: ArithRef, col: ArithRef, current_player: int
+    ) -> BoolRef:
         """Check if square is empty or contains opponent's piece."""
         square_conditions = []
 
@@ -247,7 +249,6 @@ class GameRules:
                     Or(d_row != 0, d_col != 0),
                 ),
             ),
-
             # Giraffe - moves 1 square orthogonally
             Implies(
                 effective_type == PieceType.GIRAFFE.value,
@@ -256,13 +257,11 @@ class GameRules:
                     And(d_col == 0, Or(d_row == 1, d_row == -1)),
                 ),
             ),
-
             # Elephant - moves 1 square diagonally
             Implies(
                 effective_type == PieceType.ELEPHANT.value,
                 And(Abs(d_row) == 1, Abs(d_col) == 1),
             ),
-
             # Chick - moves 1 square forward
             Implies(
                 effective_type == PieceType.CHICK.value,
@@ -275,7 +274,6 @@ class GameRules:
                     d_col == 0,
                 ),
             ),
-
             # Hen - moves like Gold
             Implies(
                 effective_type == PieceType.HEN.value,
@@ -394,16 +392,18 @@ class GameRules:
             )
 
         # If no valid capture, set captures to -1
-        no_valid_capture = And([
-            Or(
-                state.piece_captured[t, PieceId(p)],
-                p == move.piece_id,
-                state.piece_row[t, PieceId(p)] != move.to_row,
-                state.piece_col[t, PieceId(p)] != move.to_col,
-                state.piece_owner[t, PieceId(p)] == current_player,
-            )
-            for p in range(state.N_PIECES)
-        ])
+        no_valid_capture = And(
+            [
+                Or(
+                    state.piece_captured[t, PieceId(p)],
+                    p == move.piece_id,
+                    state.piece_row[t, PieceId(p)] != move.to_row,
+                    state.piece_col[t, PieceId(p)] != move.to_col,
+                    state.piece_owner[t, PieceId(p)] == current_player,
+                )
+                for p in range(state.N_PIECES)
+            ]
+        )
         constraints.append(Implies(no_valid_capture, move.captures == -1))
 
         return constraints
@@ -412,18 +412,12 @@ class GameRules:
 # Constraint combinators for functional programming
 def for_all_pieces(constraint_fn: Callable) -> Callable:
     """Apply constraint to all pieces."""
-    return lambda state, t: And([
-        constraint_fn(state, t, PieceId(p))
-        for p in range(state.N_PIECES)
-    ])
+    return lambda state, t: And([constraint_fn(state, t, PieceId(p)) for p in range(state.N_PIECES)])
 
 
 def for_all_times(constraint_fn: Callable) -> Callable:
     """Apply constraint to all time steps."""
-    return lambda state: And([
-        constraint_fn(state, TimeIndex(t))
-        for t in range(state.max_moves)
-    ])
+    return lambda state: And([constraint_fn(state, TimeIndex(t)) for t in range(state.max_moves)])
 
 
 def implies_for_piece(piece_id: int, constraint_fn: Callable) -> Callable:

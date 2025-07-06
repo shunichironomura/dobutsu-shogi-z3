@@ -1,5 +1,7 @@
 """Checkmate solver implementation."""
 
+from __future__ import annotations
+
 from z3 import Not, sat
 
 from ..game_rules import GameRules

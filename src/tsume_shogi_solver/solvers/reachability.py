@@ -1,5 +1,7 @@
 """Reachability solver implementation."""
 
+from __future__ import annotations
+
 from z3 import And, Or, sat
 
 from ..types import ReachabilityProblem, ReachabilitySolution, TimeIndex
@@ -42,10 +44,12 @@ class ReachabilitySolver(BaseSolver):
                 t = TimeIndex(_t)
                 target_row, target_col = problem.target
 
-                if (model[state.piece_row[t, problem.piece_id]].as_long() == target_row and
-                    model[state.piece_col[t, problem.piece_id]].as_long() == target_col and
-                    model[state.piece_owner[t, problem.piece_id]].as_long() == problem.player.value and
-                    not model[state.piece_captured[t, problem.piece_id]]):
+                if (
+                    model[state.piece_row[t, problem.piece_id]].as_long() == target_row
+                    and model[state.piece_col[t, problem.piece_id]].as_long() == target_col
+                    and model[state.piece_owner[t, problem.piece_id]].as_long() == problem.player.value
+                    and not model[state.piece_captured[t, problem.piece_id]]
+                ):
                     reached_time = _t
                     break
 

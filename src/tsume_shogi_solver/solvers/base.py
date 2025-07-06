@@ -1,9 +1,11 @@
 """Base solver protocol and utilities."""
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
-from z3 import Solver, is_true, sat
+from z3 import Solver, is_true
 
 from ..game_rules import GameRules
 from ..game_state import GameState
@@ -17,7 +19,7 @@ class BaseSolver(ABC):
     """Base class for all solvers."""
 
     @abstractmethod
-    def solve(self, problem: "Problem") -> "Solution | None":
+    def solve(self, problem: Problem) -> Solution | None:
         """Solve the given problem."""
 
     def _create_base_solver(self, max_moves: int, initial_state) -> tuple[Solver, GameState]:

@@ -1,6 +1,6 @@
 """Examples demonstrating the new modular Dōbutsu Shōgi solver."""
 
-from src.tsume_shogi_solver import (
+from tsume_shogi_solver import (
     DEFAULT_INITIAL_SETUP,
     CheckmateProblem,
     CheckmateSolver,
@@ -17,7 +17,7 @@ from src.tsume_shogi_solver import (
     find_shortest_mate,
     find_shortest_path,
 )
-from src.tsume_shogi_solver.types import ColIndex, RowIndex
+from tsume_shogi_solver.types import ColIndex, RowIndex
 
 
 def example_checkmate_solving():
@@ -32,7 +32,7 @@ def example_checkmate_solving():
         print(f"Found mate in {solution.mate_in} moves for {solution.winning_player.name}!")
         for move in solution.moves:
             print(
-                f"  Move {move.move_number + 1} ({move.player}): {move.piece_type.name} from {move.from_} to {move.to}"
+                f"  Move {move.move_number + 1} ({move.player}): {move.piece_type.name} from {move.from_} to {move.to}",
             )
     else:
         print("No mate found (expected - Gote has winning strategy)")
@@ -172,7 +172,7 @@ def example_solver_comparison():
 
         piece_type = next(p.piece_type for p in DEFAULT_INITIAL_SETUP if p.piece_id == piece_id)
         print(
-            f"Reachability solver - {piece_type.name}: {'Can reach' if reachability_result else 'Cannot reach'} (4,2)"
+            f"Reachability solver - {piece_type.name}: {'Can reach' if reachability_result else 'Cannot reach'} (4,2)",
         )
 
     # General Tsume solver
