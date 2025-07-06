@@ -129,7 +129,7 @@ class DobutsuShogiZ3:
     piece_row: dict[TimeIndex, dict[PieceId, ArithRef]] = field(
         default_factory=dict,
         init=False,
-    )  # TODO: Change to (MoveIndex, PieceId) -> ArithRef # Row of piece at time t (1-indexed). 0 means piece is in hand.
+    )  # TODO: Change to (MoveIndex, PieceId) -> ArithRef. Row of piece at time t (1-indexed). 0 means piece is in hand.
     piece_col: dict[TimeIndex, dict[PieceId, ArithRef]] = field(
         default_factory=dict,
         init=False,
@@ -203,6 +203,7 @@ class DobutsuShogiZ3:
             )
 
             # Constraints on moves
+            self.solver.add(self.moves[t].piece_id >= 0)
             self.solver.add(self.moves[t].piece_id < self.N_PIECES)
             self.solver.add(self.moves[t].from_row >= 0)  # 0 means drop
             self.solver.add(self.moves[t].from_row <= self.ROWS)
@@ -471,6 +472,7 @@ class DobutsuShogiZ3:
                         self.piece_col[next_t][p] == move.to_col,
                         self.piece_captured[next_t][p] == False,
                         self.piece_in_hand_of[next_t][p] == -1,
+                        self.piece_owner[next_t, p] == self.piece_owner[t, p],  # Owner stays same when moving
                         # Check promotion (Chick reaching last rank)
                         If(
                             And(
@@ -491,10 +493,17 @@ class DobutsuShogiZ3:
                             self.piece_captured[next_t][p] == True,
                             self.piece_in_hand_of[next_t][p] == (t % 2),  # Current player
                             self.piece_promoted[next_t][p] == False,  # Demoted when captured
+                            self.piece_owner[next_t, p] == (t % 2),  # Ownership changes to capturing player!
                             same_position,  # Position doesn't matter when captured
                         ),
                         # This piece is not involved in the move
-                        And(same_position, same_captured, same_promoted, same_hand),
+                        And(
+                            same_position,
+                            same_captured,
+                            same_promoted,
+                            same_hand,
+                            self.piece_owner[next_t, p] == self.piece_owner[t, p],  # Owner stays same
+                        ),
                     ),
                 ),
             )
@@ -626,34 +635,27 @@ class DobutsuShogiZ3:
 
                 piece_id = PieceId(model[move.piece_id].as_long())
                 piece_type_val: int = model[self.piece_type[piece_id]].as_long()
-                piece_types: list[Literal["Lion", "Giraffe", "Elephant", "Chick", "Hen"]] = [
-                    "Lion",
-                    "Giraffe",
-                    "Elephant",
-                    "Chick",
-                    "Hen",
-                ]
 
-                move_data: MoveData = {
-                    "move_number": TimeIndex(t),
-                    "player": "Sente" if t % 2 == 0 else "Gote",
-                    "piece_id": piece_id,
-                    "is_drop": is_true(model[move.is_drop]),
-                    "from_": (model[move.from_row].as_long(), model[move.from_col].as_long()),
-                    "to": (model[move.to_row].as_long(), model[move.to_col].as_long()),
-                    "captures": model[move.captures].as_long(),
-                    "piece_type": piece_types[piece_type_val],
-                }
+                move_data = MoveData(
+                    move_number=TimeIndex(t),
+                    player="Sente" if t % 2 == 0 else "Gote",
+                    piece_id=piece_id,
+                    is_drop=is_true(model[move.is_drop]),
+                    from_=(RowIndex(model[move.from_row].as_long()), ColIndex(model[move.from_col].as_long())),
+                    to=(RowIndex(model[move.to_row].as_long()), ColIndex(model[move.to_col].as_long())),
+                    captures=model[move.captures].as_long(),
+                    piece_type=PieceType(piece_type_val),
+                )
 
                 # Debug: Print piece owner
-                owner = model[self.piece_owner[piece_id]].as_long()
+                owner = model[self.piece_owner[t, piece_id]].as_long()
                 print(f"\nDebug Move {t + 1}: Piece {piece_id} (type={piece_type_val}, owner={owner})")
                 print(f"  From: ({model[move.from_row].as_long()}, {model[move.from_col].as_long()})")
                 print(f"  To: ({model[move.to_row].as_long()}, {model[move.to_col].as_long()})")
-                if move_data["captures"] >= 0:
-                    cap_type = model[self.piece_type[move_data["captures"]]].as_long()
-                    cap_owner = model[self.piece_owner[move_data["captures"]]].as_long()
-                    print(f"  Captures: Piece {move_data['captures']} (type={cap_type}, owner={cap_owner})")
+                if move_data.captures >= 0:
+                    cap_type = model[self.piece_type[PieceId(move_data.captures)]].as_long()
+                    cap_owner = model[self.piece_owner[t, PieceId(move_data.captures)]].as_long()
+                    print(f"  Captures: Piece {move_data.captures} (type={cap_type}, owner={cap_owner})")
 
                 moves.append(move_data)
 

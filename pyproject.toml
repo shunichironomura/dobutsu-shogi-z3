@@ -19,19 +19,19 @@ dev = [
     "pre-commit>=4.2.0",
     { include-group = "ruff" },
     { include-group = "typing" },
-    # { include-group = "test" },
+    { include-group = "test" },
 ]
 ruff = [
     "ruff>=0.12.2", # comment
 ]
 typing = [
     "mypy>=1.16.1",
-    # { include-group = "test" }, # For type checking test code
+    { include-group = "test" }, # For type checking test code
 ]
-# test = [
-#     "pytest>=8.4.1",
-#     # "coverage>=7.8.2", # If you use coverage
-# ]
+test = [
+    "pytest>=8.4.1",
+    # "coverage>=7.8.2", # If you use coverage
+]
 
 [tool.pytest.ini_options]
 addopts = "-ra --verbose --verbose --capture=no --strict-markers --color=yes --log-cli-level=INFO"
