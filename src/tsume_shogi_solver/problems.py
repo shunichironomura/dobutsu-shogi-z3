@@ -5,10 +5,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Protocol
 
-from .core import MoveData, PieceId, PieceState, Player, Position
-
 if TYPE_CHECKING:
     from z3.z3 import BoolRef
+
+    from .core import MoveData, PieceId, PieceState, Player, Position
 
 
 # Problem Types
