@@ -104,7 +104,7 @@ def exercise2_piece_swap_solution() -> None:
 
 
 def exercise3_promotion_race_solution() -> None:
-    """Solution for Exercise 3: Which piece reaches row 4 fastest?"""
+    """Solution for Exercise 3: Which piece reaches row 4 fastest."""
     print("\n=== Exercise 3 Solution: Promotion Race ===")
     print("Question: Which Sente piece can reach row 4 (back rank) fastest?")
 
@@ -455,9 +455,9 @@ def exercise10_theoretical_bounds_solution() -> None:
 
     # 2. Analyze state space
     print("\n2. State space analysis:")
-    print("   Board: 3×4 = 12 squares")
+    print("   Board: 3x4 = 12 squares")
     print("   Pieces: 8 total (4 per player)")
-    print("   Rough upper bound: 12^8 ≈ 430 million positions")
+    print("   Rough upper bound: 12^8 = ~430 million positions")
     print("   But many are illegal (multiple pieces on same square)")
     print("   Actual state space: ~1-10 million legal positions")
 
@@ -469,8 +469,8 @@ def exercise10_theoretical_bounds_solution() -> None:
 
     # 4. Verification complexity
     print("\n4. Verification complexity:")
-    print("   Reachability: O(states × moves) with bounded model checking")
-    print("   Checkmate: O(states × moves × branching factor)")
+    print("   Reachability: O(states * moves) with bounded model checking")
+    print("   Checkmate: O(states * moves * branching factor)")
     print("   Full game solution: EXPTIME-complete")
 
     print("\n5. Scaling to larger games:")

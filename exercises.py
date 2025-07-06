@@ -56,7 +56,9 @@ def print_solution_moves(moves: list[MoveData]) -> None:
 
 
 def exercise1_giraffe_reachability() -> None:
-    """Exercise 1 (Easy): Can Sente's giraffe reach the center square (2,2)?
+    """Exercise 1 (Easy): Can Sente's giraffe reach the center square (2,2)?.
+
+    Goal: Learn basic reachability queries.
 
     Learning objectives:
     - Basic reachability queries
@@ -78,17 +80,21 @@ def exercise1_giraffe_reachability() -> None:
     # Hint: Use ReachabilitySolver and ReachabilityProblem
 
     # Your code here:
-    giraffe_id = PieceId(1)  # TODO: Verify this is correct
-    target_position: Position = (RowIndex(2), ColIndex(2))  # TODO: Is this the center?
+    # giraffe_id = PieceId(1)  # TODO: Verify this is correct
+    # target_position: Position = (RowIndex(2), ColIndex(2))  # TODO: Is this the center?
 
     # TODO: Create solver and problem
-    # TODO: Solve and print results
+    # solver = ReachabilitySolver()
+    # problem = ReachabilityProblem(...)
+    # solution = solver.solve(problem)
 
     print("\nTODO: Complete this exercise!")
 
 
 def exercise2_piece_swap() -> None:
-    """Exercise 2 (Easy): Can the two elephants swap positions?
+    """Exercise 2 (Easy): Can the two elephants swap positions?.
+
+    Goal: Understand piece movement constraints.
 
     Learning objectives:
     - Multiple reachability queries
@@ -114,7 +120,9 @@ def exercise2_piece_swap() -> None:
 
 
 def exercise3_promotion_race() -> None:
-    """Exercise 3 (Easy-Medium): Which piece can promote fastest?
+    """Exercise 3 (Easy-Medium): Which piece can promote fastest?.
+
+    Goal: Compare multiple pieces and find optimal paths.
 
     Learning objectives:
     - Comparing multiple pieces
@@ -145,7 +153,9 @@ def exercise3_promotion_race() -> None:
 
 
 def exercise4_gote_checkmate() -> None:
-    """Exercise 4 (Medium): Can Gote (second player) force checkmate?
+    """Exercise 4 (Medium): Can Gote (second player) force checkmate?.
+
+    Goal: Understand turn parity and adversarial reasoning.
 
     Learning objectives:
     - Checkmate from defender's perspective
@@ -187,16 +197,16 @@ def exercise5_endgame_analysis() -> None:
     print("Position: Sente has Lion at (3,2) and captured Giraffe")
     print("         Gote has Lion at (4,1) and Elephant at (3,1)")
 
-    # Position to analyze:
-    endgame_position = [
-        # Sente pieces
-        PieceState(PieceId(0), PieceType.LION, Player.SENTE.value, RowIndex(3), ColIndex(2)),
-        # Sente has captured giraffe (in hand)
-        PieceState(PieceId(5), PieceType.GIRAFFE, Player.SENTE.value, RowIndex(-1), ColIndex(-1)),
-        # Gote pieces
-        PieceState(PieceId(4), PieceType.LION, Player.GOTE.value, RowIndex(4), ColIndex(1)),
-        PieceState(PieceId(6), PieceType.ELEPHANT, Player.GOTE.value, RowIndex(3), ColIndex(1)),
-    ]
+    # Position to analyze (uncomment when implementing):
+    # endgame_position = [
+    #     # Sente pieces
+    #     PieceState(PieceId(0), PieceType.LION, Player.SENTE.value, RowIndex(3), ColIndex(2)),
+    #     # Sente has captured giraffe (in hand)
+    #     PieceState(PieceId(5), PieceType.GIRAFFE, Player.SENTE.value, RowIndex(-1), ColIndex(-1)),
+    #     # Gote pieces
+    #     PieceState(PieceId(4), PieceType.LION, Player.GOTE.value, RowIndex(4), ColIndex(1)),
+    #     PieceState(PieceId(6), PieceType.ELEPHANT, Player.GOTE.value, RowIndex(3), ColIndex(1)),
+    # ]
 
     # TODO: Complete the analysis
     # Hint: Try checkmate in 3, 5 moves
@@ -223,15 +233,15 @@ def exercise6_defensive_checkmate() -> None:
     print("Challenge: Create a position where both players threaten victory")
     print("Can Sente win before Gote?")
 
-    # Create a tense position:
-    race_position = [
-        # Sente pieces (threatening)
-        PieceState(PieceId(0), PieceType.LION, Player.SENTE.value, RowIndex(3), ColIndex(2)),
-        PieceState(PieceId(3), PieceType.HEN, Player.SENTE.value, RowIndex(3), ColIndex(3)),  # Promoted chick
-        # Gote pieces (also threatening!)
-        PieceState(PieceId(4), PieceType.LION, Player.GOTE.value, RowIndex(2), ColIndex(1)),
-        PieceState(PieceId(5), PieceType.GIRAFFE, Player.GOTE.value, RowIndex(2), ColIndex(2)),
-    ]
+    # Create a tense position (uncomment when implementing):
+    # race_position = [
+    #     # Sente pieces (threatening)
+    #     PieceState(PieceId(0), PieceType.LION, Player.SENTE.value, RowIndex(3), ColIndex(2)),
+    #     PieceState(PieceId(3), PieceType.HEN, Player.SENTE.value, RowIndex(3), ColIndex(3)),  # Promoted chick
+    #     # Gote pieces (also threatening!)
+    #     PieceState(PieceId(4), PieceType.LION, Player.GOTE.value, RowIndex(2), ColIndex(1)),
+    #     PieceState(PieceId(5), PieceType.GIRAFFE, Player.GOTE.value, RowIndex(2), ColIndex(2)),
+    # ]
 
     # TODO: Analyze who wins with perfect play
     # Hint: Check both Sente and Gote for checkmate
@@ -263,18 +273,18 @@ def exercise7_piece_cooperation() -> None:
     print("\n=== Exercise 7: Piece Cooperation ===")
     print("Prove: Lion alone cannot checkmate, but Lion + Giraffe can")
 
-    # Position 1: Lion alone
-    lion_only = [
-        PieceState(PieceId(0), PieceType.LION, Player.SENTE.value, RowIndex(2), ColIndex(2)),
-        PieceState(PieceId(4), PieceType.LION, Player.GOTE.value, RowIndex(4), ColIndex(2)),
-    ]
+    # Position 1: Lion alone (uncomment when implementing)
+    # lion_only = [
+    #     PieceState(PieceId(0), PieceType.LION, Player.SENTE.value, RowIndex(2), ColIndex(2)),
+    #     PieceState(PieceId(4), PieceType.LION, Player.GOTE.value, RowIndex(4), ColIndex(2)),
+    # ]
 
-    # Position 2: Lion + Giraffe
-    lion_giraffe = [
-        PieceState(PieceId(0), PieceType.LION, Player.SENTE.value, RowIndex(2), ColIndex(2)),
-        PieceState(PieceId(1), PieceType.GIRAFFE, Player.SENTE.value, RowIndex(2), ColIndex(3)),
-        PieceState(PieceId(4), PieceType.LION, Player.GOTE.value, RowIndex(4), ColIndex(2)),
-    ]
+    # Position 2: Lion + Giraffe (uncomment when implementing)
+    # lion_giraffe = [
+    #     PieceState(PieceId(0), PieceType.LION, Player.SENTE.value, RowIndex(2), ColIndex(2)),
+    #     PieceState(PieceId(1), PieceType.GIRAFFE, Player.SENTE.value, RowIndex(2), ColIndex(3)),
+    #     PieceState(PieceId(4), PieceType.LION, Player.GOTE.value, RowIndex(4), ColIndex(2)),
+    # ]
 
     # TODO: Analyze both positions
     # TODO: Explain why cooperation is necessary
@@ -300,13 +310,13 @@ def exercise8_optimal_defense() -> None:
     print("\n=== Exercise 8: Optimal Defense Analysis ===")
     print("Find how suboptimal defense changes the outcome")
 
-    critical_position = [
-        PieceState(PieceId(0), PieceType.LION, Player.SENTE.value, RowIndex(2), ColIndex(2)),
-        PieceState(PieceId(1), PieceType.GIRAFFE, Player.SENTE.value, RowIndex(1), ColIndex(1)),
-        PieceState(PieceId(2), PieceType.ELEPHANT, Player.SENTE.value, RowIndex(3), ColIndex(3)),
-        PieceState(PieceId(4), PieceType.LION, Player.GOTE.value, RowIndex(4), ColIndex(2)),
-        PieceState(PieceId(7), PieceType.CHICK, Player.GOTE.value, RowIndex(3), ColIndex(1)),
-    ]
+    # critical_position = [
+    #     PieceState(PieceId(0), PieceType.LION, Player.SENTE.value, RowIndex(2), ColIndex(2)),
+    #     PieceState(PieceId(1), PieceType.GIRAFFE, Player.SENTE.value, RowIndex(1), ColIndex(1)),
+    #     PieceState(PieceId(2), PieceType.ELEPHANT, Player.SENTE.value, RowIndex(3), ColIndex(3)),
+    #     PieceState(PieceId(4), PieceType.LION, Player.GOTE.value, RowIndex(4), ColIndex(2)),
+    #     PieceState(PieceId(7), PieceType.CHICK, Player.GOTE.value, RowIndex(3), ColIndex(1)),
+    # ]
 
     # TODO: Find checkmate length with optimal defense
     # TODO: Identify which Gote moves are critical
@@ -340,9 +350,9 @@ def exercise9_tsume_creation() -> None:
     # - Place Gote's lion near the edge
     # - Test that mate exists in 5 but not in 3
 
-    your_tsume = [
-        # TODO: Create your position here
-    ]
+    # your_tsume: list[PieceState] = [
+    #     # TODO: Create your position here
+    # ]
 
     print("\nTODO: Create your own tsume problem!")
 
