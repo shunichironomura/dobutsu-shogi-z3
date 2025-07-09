@@ -70,7 +70,7 @@ def example1_basic_reachability() -> None:
 
     # Sente's chick is piece ID 3
     chick_id = PieceId(3)
-    target_position: Position = (RowIndex(4), ColIndex(2))  # Back rank center
+    target_position: Position = Position(row=RowIndex(4), col=ColIndex(2))  # Back rank center
 
     # Create solver instance - this will generate Z3 constraints
     solver = ReachabilitySolver()
@@ -117,10 +117,10 @@ def example2_movement_validation() -> None:
     # Sente's elephant is piece ID 2
     elephant_id = PieceId(2)
     corners = [
-        (RowIndex(1), ColIndex(1)),
-        (RowIndex(1), ColIndex(3)),
-        (RowIndex(4), ColIndex(1)),
-        (RowIndex(4), ColIndex(3)),
+        Position(row=RowIndex(1), col=ColIndex(1)),
+        Position(row=RowIndex(1), col=ColIndex(3)),
+        Position(row=RowIndex(4), col=ColIndex(1)),
+        Position(row=RowIndex(4), col=ColIndex(3)),
     ]
 
     solver = ReachabilitySolver()
@@ -138,6 +138,8 @@ def example2_movement_validation() -> None:
         solution = solver.solve(problem)
         status = "✓ REACHABLE" if solution else "✗ UNREACHABLE"
         moves = f" in {len(solution.moves)} moves" if solution else ""
+        print("-" * 40)
+        print_solution_moves(solution.moves) if solution else None
         print(f"  Corner {corner}: {status}{moves}")
 
     print("\nObservation: Some positions may be unreachable due to movement constraints!")
@@ -166,9 +168,9 @@ def example3_simple_victory() -> None:
     # Sente's lion is piece ID 0
     lion_id = PieceId(0)
     back_rank_positions = [
-        (RowIndex(4), ColIndex(1)),
-        (RowIndex(4), ColIndex(2)),
-        (RowIndex(4), ColIndex(3)),
+        Position(row=RowIndex(4), col=ColIndex(1)),
+        Position(row=RowIndex(4), col=ColIndex(2)),
+        Position(row=RowIndex(4), col=ColIndex(3)),
     ]
 
     solver = ReachabilitySolver()
@@ -448,7 +450,7 @@ def example8_shortest_path() -> None:
 
     print("\nSearching for optimal promotion path:")
     for col in [1, 2, 3]:
-        target = (promotion_row, ColIndex(col))
+        target = Position(promotion_row, ColIndex(col))
         print(f"  Checking column {col}...", end=" ")
 
         # Iterative deepening: start with small depths
@@ -528,7 +530,7 @@ def example9_solver_comparison() -> None:
     reachability_problem = ReachabilityProblem(
         initial_state=position,
         piece_id=PieceId(0),
-        target=(RowIndex(4), ColIndex(2)),
+        target=Position(row=RowIndex(4), col=ColIndex(2)),
         player=Player.SENTE,
         max_moves=5,
     )
@@ -566,33 +568,33 @@ def main() -> None:
     print("Learn how reachability queries work in finite state spaces")
     example1_basic_reachability()
     example2_movement_validation()
-    example3_simple_victory()
+    # example3_simple_victory()
 
-    # Part 2: Intermediate Examples
-    print("\n\nPART 2: INTERMEDIATE EXAMPLES")
-    print("Introduce adversarial reasoning and custom positions")
-    example4_basic_checkmate()
-    example5_custom_position()
+    # # Part 2: Intermediate Examples
+    # print("\n\nPART 2: INTERMEDIATE EXAMPLES")
+    # print("Introduce adversarial reasoning and custom positions")
+    # example4_basic_checkmate()
+    # example5_custom_position()
 
-    # Part 3: Sophisticated Examples
-    print("\n\nPART 3: SOPHISTICATED TSUME PROBLEMS")
-    print("Complex constraints and exact solutions")
-    example6_classic_tsume()
-    example7_tsume_with_constraints()
+    # # Part 3: Sophisticated Examples
+    # print("\n\nPART 3: SOPHISTICATED TSUME PROBLEMS")
+    # print("Complex constraints and exact solutions")
+    # example6_classic_tsume()
+    # example7_tsume_with_constraints()
 
-    # Part 4: Optimization
-    print("\n\nPART 4: OPTIMIZATION EXAMPLES")
-    print("Finding optimal solutions and comparing approaches")
-    example8_shortest_path()
-    example9_solver_comparison()
+    # # Part 4: Optimization
+    # print("\n\nPART 4: OPTIMIZATION EXAMPLES")
+    # print("Finding optimal solutions and comparing approaches")
+    # example8_shortest_path()
+    # example9_solver_comparison()
 
-    print("\n" + "=" * 60)
-    print("Workshop completed!")
-    print("\nKey takeaways:")
-    print("- SMT solvers can verify complex game properties")
-    print("- Different properties require different encodings")
-    print("- Bounded model checking makes infinite games decidable")
-    print("- Formal methods provide provable guarantees")
+    # print("\n" + "=" * 60)
+    # print("Workshop completed!")
+    # print("\nKey takeaways:")
+    # print("- SMT solvers can verify complex game properties")
+    # print("- Different properties require different encodings")
+    # print("- Bounded model checking makes infinite games decidable")
+    # print("- Formal methods provide provable guarantees")
 
 
 if __name__ == "__main__":

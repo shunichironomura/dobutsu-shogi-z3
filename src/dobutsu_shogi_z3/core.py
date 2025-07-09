@@ -13,7 +13,24 @@ PlayerId = NewType("PlayerId", int)
 TimeIndex = NewType("TimeIndex", int)
 ColIndex = NewType("ColIndex", int)
 RowIndex = NewType("RowIndex", int)
-Position = tuple[RowIndex, ColIndex]
+
+
+@dataclass(frozen=True, slots=True)
+class Position:
+    """Position on the Dōbutsu Shōgi board."""
+
+    row: RowIndex  # 1-4
+    col: ColIndex  # 1-3
+
+    def __str__(self) -> str:
+        """Return string representation of the position."""
+        col_letter = chr(ord("A") + self.col - 1)  # Convert 1-3 to A-C
+        row_number = 5 - self.row  # Convert 1-4 to 4-1
+        return f"{col_letter}{row_number}"
+
+    def __repr__(self) -> str:
+        """Return string representation of the position."""
+        return f"Position(row={self.row}, col={self.col})"
 
 
 class PieceType(Enum):

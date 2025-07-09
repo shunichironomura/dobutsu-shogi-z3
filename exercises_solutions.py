@@ -47,11 +47,11 @@ def print_solution_moves(moves: list[MoveData]) -> None:
 def exercise1_giraffe_reachability_solution() -> None:
     """Solution for Exercise 1: Giraffe to center square."""
     print("\n=== Exercise 1 Solution: Giraffe to Center ===")
-    print("Question: Can Sente's giraffe reach the center square (2,2)?")
+    print("Question: Can Sente's giraffe reach the center square (B3)?")
 
     # Sente's giraffe is piece ID 1 (from DEFAULT_INITIAL_SETUP)
     giraffe_id = PieceId(1)
-    target_position: Position = (RowIndex(2), ColIndex(2))
+    target_position: Position = Position(row=RowIndex(2), col=ColIndex(2))
 
     solver = ReachabilitySolver()
     problem = ReachabilityProblem(
@@ -79,7 +79,7 @@ def exercise2_piece_swap_solution() -> None:
 
     # Sente's elephant starts at (1,3), Gote's at (4,3)
     sente_elephant_id = PieceId(2)
-    gote_start_position: Position = (RowIndex(4), ColIndex(3))
+    gote_start_position: Position = Position(row=RowIndex(4), col=ColIndex(3))
 
     solver = ReachabilitySolver()
     problem = ReachabilityProblem(
@@ -128,7 +128,7 @@ def exercise3_promotion_race_solution() -> None:
                 problem = ReachabilityProblem(
                     initial_state=DEFAULT_INITIAL_SETUP,
                     piece_id=piece_id,
-                    target=(RowIndex(4), ColIndex(col)),
+                    target=Position(row=RowIndex(4), col=ColIndex(col)),
                     player=Player.SENTE,
                     max_moves=max_moves,
                 )
@@ -520,32 +520,32 @@ def main() -> None:
     print("\n\nPART 1: EASY EXERCISES SOLUTIONS")
     print("-" * 50)
     exercise1_giraffe_reachability_solution()
-    exercise2_piece_swap_solution()
-    exercise3_promotion_race_solution()
+    # exercise2_piece_swap_solution()
+    # exercise3_promotion_race_solution()
 
-    # Medium solutions
-    print("\n\nPART 2: MEDIUM EXERCISES SOLUTIONS")
-    print("-" * 50)
-    exercise4_gote_checkmate_solution()
-    exercise5_endgame_analysis_solution()
-    exercise6_defensive_checkmate_solution()
+    # # Medium solutions
+    # print("\n\nPART 2: MEDIUM EXERCISES SOLUTIONS")
+    # print("-" * 50)
+    # exercise4_gote_checkmate_solution()
+    # exercise5_endgame_analysis_solution()
+    # exercise6_defensive_checkmate_solution()
 
-    # Hard solutions
-    print("\n\nPART 3: DIFFICULT EXERCISES SOLUTIONS")
-    print("-" * 50)
-    exercise7_piece_cooperation_solution()
-    exercise8_optimal_defense_solution()
-    exercise9_tsume_creation_solution()
-    exercise10_theoretical_bounds_solution()
+    # # Hard solutions
+    # print("\n\nPART 3: DIFFICULT EXERCISES SOLUTIONS")
+    # print("-" * 50)
+    # exercise7_piece_cooperation_solution()
+    # exercise8_optimal_defense_solution()
+    # exercise9_tsume_creation_solution()
+    # exercise10_theoretical_bounds_solution()
 
-    print("\n" + "=" * 60)
-    print("All solutions completed!")
-    print("\nKey formal methods concepts demonstrated:")
-    print("1. Bounded model checking for reachability")
-    print("2. Adversarial reasoning for game analysis")
-    print("3. Constraint satisfaction for puzzle solving")
-    print("4. Optimality proofs through iterative deepening")
-    print("5. State space analysis and complexity bounds")
+    # print("\n" + "=" * 60)
+    # print("All solutions completed!")
+    # print("\nKey formal methods concepts demonstrated:")
+    # print("1. Bounded model checking for reachability")
+    # print("2. Adversarial reasoning for game analysis")
+    # print("3. Constraint satisfaction for puzzle solving")
+    # print("4. Optimality proofs through iterative deepening")
+    # print("5. State space analysis and complexity bounds")
 
 
 if __name__ == "__main__":

@@ -6,7 +6,16 @@ from typing import TYPE_CHECKING
 
 from z3 import Solver, is_true
 
-from dobutsu_shogi_z3.core import MoveData, PieceId, PieceState, PieceType, TimeIndex
+from dobutsu_shogi_z3.core import (
+    ColIndex,
+    MoveData,
+    PieceId,
+    PieceState,
+    PieceType,
+    Position,
+    RowIndex,
+    TimeIndex,
+)
 from dobutsu_shogi_z3.z3_constraints import GameRules
 from dobutsu_shogi_z3.z3_models import GameState
 
@@ -44,13 +53,13 @@ def extract_moves(model: ModelRef, state: GameState, n_moves: int) -> list[MoveD
             player="Sente" if t % 2 == 0 else "Gote",
             piece_id=piece_id,
             is_drop=is_true(model[move.is_drop]),
-            from_=(
-                model[move.from_row].as_long(),
-                model[move.from_col].as_long(),
+            from_=Position(
+                row=RowIndex(model[move.from_row].as_long()),
+                col=ColIndex(model[move.from_col].as_long()),
             ),
-            to=(
-                model[move.to_row].as_long(),
-                model[move.to_col].as_long(),
+            to=Position(
+                row=RowIndex(model[move.to_row].as_long()),
+                col=ColIndex(model[move.to_col].as_long()),
             ),
             captures=model[move.captures].as_long(),
             piece_type=PieceType(piece_type_val),

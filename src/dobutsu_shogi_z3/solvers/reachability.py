@@ -46,11 +46,9 @@ class ReachabilitySolver:
 
         for _t in range(problem.max_moves + 1):
             t = TimeIndex(_t)
-            target_row, target_col = problem.target
-
             piece_at_target = And(
-                state.piece_row[t, problem.piece_id] == target_row,
-                state.piece_col[t, problem.piece_id] == target_col,
+                state.piece_row[t, problem.piece_id] == problem.target.row,
+                state.piece_col[t, problem.piece_id] == problem.target.col,
                 state.piece_owner[t, problem.piece_id] == problem.player.value,
                 state.piece_captured[t, problem.piece_id] == False,
             )
@@ -65,11 +63,9 @@ class ReachabilitySolver:
             reached_time = None
             for _t in range(problem.max_moves + 1):
                 t = TimeIndex(_t)
-                target_row, target_col = problem.target
-
                 if (
-                    model[state.piece_row[t, problem.piece_id]].as_long() == target_row
-                    and model[state.piece_col[t, problem.piece_id]].as_long() == target_col
+                    model[state.piece_row[t, problem.piece_id]].as_long() == problem.target.row
+                    and model[state.piece_col[t, problem.piece_id]].as_long() == problem.target.col
                     and model[state.piece_owner[t, problem.piece_id]].as_long() == problem.player.value
                     and not model[state.piece_captured[t, problem.piece_id]]
                 ):

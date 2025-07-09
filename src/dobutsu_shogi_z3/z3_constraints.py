@@ -10,8 +10,6 @@ from z3 import Abs, And, BoolRef, If, Implies, Not, Or
 from .core import PieceId, PieceType, Player, PlayerId, TimeIndex
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-
     from z3.z3 import ArithRef
 
     from .z3_models import GameState, MoveVariables

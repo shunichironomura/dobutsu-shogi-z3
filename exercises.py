@@ -81,7 +81,7 @@ def exercise1_giraffe_reachability() -> None:
 
     # Your code here:
     # giraffe_id = PieceId(1)  # TODO: Verify this is correct
-    # target_position: Position = (RowIndex(2), ColIndex(2))  # TODO: Is this the center?
+    # target_position: Position = Position(row=RowIndex(2), col=ColIndex(2))  # TODO: Is this the center?
 
     # TODO: Create solver and problem
     # solver = ReachabilitySolver()
